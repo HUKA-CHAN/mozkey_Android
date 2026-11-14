@@ -78,3 +78,41 @@ jobs:
           name: mozkey-android-apk
           path: android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+  # Publishes the APK as a GitHub Release so it stays available after the
+  # workflow artifact expires. Kept in its own job so that the build itself
+  # runs with a read-only token.
+  release:
+    needs: apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: download artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: mozkey-android-apk
+          path: apk
+
+      - name: create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: android-build-${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          apk="mozkey-android-build-${{ github.run_number }}.apk"
+          mv apk/*.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          {
+            echo "Mozkey for Android (Android 17 / targetSdk 37)."
+            echo
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Signed with a per-build debug key: uninstall the previous build before installing this one."
+          } > notes.md
+          gh release create "$TAG" "$apk" "$apk.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Mozkey for Android build ${{ github.run_number }}" \
+            --notes-file notes.md
