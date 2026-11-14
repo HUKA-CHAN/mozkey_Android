@@ -64,12 +64,22 @@ verify_sha256() {
 step_mozc() {
   log "Building libmozc.so and mozc.data with Bazel"
   command -v bazelisk >/dev/null || die "bazelisk is required (https://github.com/bazelbuild/bazelisk)"
+  local host_config
+  case "$(uname -s)" in
+    Linux) host_config=oss_linux ;;
+    Darwin) host_config=oss_macos ;;
+    *) die "unsupported host: $(uname -s) (use Linux, macOS or WSL)" ;;
+  esac
   (
     cd "$SRC_DIR"
     # Downloads Mozc's third-party sources and the Android NDK used by Bazel.
     python3 build_tools/update_deps.py
-    bazelisk build --config oss_android --config release_build \
-      package //data_manager/oss:mozc.data
+    bazelisk build --config oss_android --config release_build package
+    # The dictionary generators are host tools and are not buildable under the
+    # Android configuration, so the (platform independent) data file is built
+    # with the host configuration.
+    bazelisk build --config "$host_config" --config release_build \
+      //data_manager/oss:mozc.data
   )
 
   local archive="$SRC_DIR/bazel-bin/android/jni/native_libs.zip"
