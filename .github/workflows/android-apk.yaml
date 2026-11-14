@@ -7,6 +7,8 @@ on:
   push:
     paths:
       - "android/**"
+      # Host-side tests are not part of the APK.
+      - "!android/tools/**"
       - "src/android/**"
       - "src/session/zenz_client_factory.*"
       - "src/session/zenz_inprocess_client*"
