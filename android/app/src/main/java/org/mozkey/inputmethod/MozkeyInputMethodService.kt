@@ -100,6 +100,7 @@ class MozkeyInputMethodService :
         prefs.raw.registerOnSharedPreferenceChangeListener(this)
         zenz = ZenzManager(applicationContext)
         engine = MozcEngine(this)
+        MozcEngine.current = engine
         engine.initialize { ok ->
             if (ok) {
                 engine.setRequest(MozcMessages.mobileRequest(prefs.kanaLayout))
@@ -113,6 +114,7 @@ class MozkeyInputMethodService :
         prefs.raw.unregisterOnSharedPreferenceChangeListener(this)
         cancelPendingCallback()
         engine.syncData()
+        if (MozcEngine.current === engine) MozcEngine.current = null
         super.onDestroy()
     }
 

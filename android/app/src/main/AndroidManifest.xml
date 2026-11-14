@@ -38,5 +38,11 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".dictionary.UserDictionaryActivity"
+            android:exported="false"
+            android:label="@string/dictionary_title"
+            android:windowSoftInputMode="adjustResize" />
+
     </application>
 </manifest>

@@ -18,6 +18,7 @@ import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import org.mozkey.inputmethod.R
+import org.mozkey.inputmethod.dictionary.UserDictionaryActivity
 import org.mozkey.inputmethod.engine.MozcEngine
 import org.mozkey.inputmethod.zenz.ZenzManager
 import java.io.IOException
@@ -77,6 +78,11 @@ class SettingsActivity : Activity() {
         content.addView(note(getString(R.string.settings_zenz_note)))
         content.addView(toggle(getString(R.string.settings_incognito), prefs.incognito) { prefs.incognito = it })
         content.addView(toggle(getString(R.string.settings_haptic), prefs.haptic) { prefs.haptic = it })
+
+        content.addView(heading(getString(R.string.settings_dictionary)))
+        content.addView(button(getString(R.string.settings_dictionary_open)) {
+            startActivity(Intent(this, UserDictionaryActivity::class.java))
+        })
 
         content.addView(heading(getString(R.string.settings_appearance)))
         addKeyboardHeightSlider(content)

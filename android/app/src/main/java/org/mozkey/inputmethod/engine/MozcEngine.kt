@@ -138,6 +138,13 @@ class MozcEngine(context: AndroidContext) {
         }
     }
 
+    /** Makes the engine read the user dictionary file again. */
+    fun reload() {
+        worker.post {
+            if (isReady) eval(Input.newBuilder().setType(Input.CommandType.RELOAD))
+        }
+    }
+
     /** Flushes user history and learning data to storage. */
     fun syncData() {
         worker.post {
@@ -182,5 +189,12 @@ class MozcEngine(context: AndroidContext) {
 
         /** Written by android/scripts/prepare_native.sh. */
         const val DATA_ASSET = "mozc/mozc.data"
+
+        /**
+         * The engine of the running IME service, if any. Lets the settings screens
+         * (same process) ask for a reload after editing the user dictionary.
+         */
+        @Volatile
+        var current: MozcEngine? = null
     }
 }

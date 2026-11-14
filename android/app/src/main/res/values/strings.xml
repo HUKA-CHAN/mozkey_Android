@@ -16,6 +16,25 @@
     <string name="settings_incognito">シークレットモード(学習しない)</string>
     <string name="settings_haptic">キー入力時に振動する</string>
 
+    <string name="settings_dictionary">辞書</string>
+    <string name="settings_dictionary_open">単語を辞書に登録する</string>
+
+    <string name="dictionary_title">ユーザー辞書</string>
+    <string name="dictionary_add">単語を追加</string>
+    <string name="dictionary_edit">単語を編集</string>
+    <string name="dictionary_empty">登録した単語はまだありません。</string>
+    <string name="dictionary_reading_hint">よみ(ひらがな)</string>
+    <string name="dictionary_word_hint">単語</string>
+    <string name="dictionary_save">保存</string>
+    <string name="dictionary_delete">削除</string>
+    <string name="dictionary_load_failed">ユーザー辞書を読み込めませんでした。</string>
+    <string name="dictionary_save_failed">ユーザー辞書を保存できませんでした。</string>
+    <string name="dictionary_error_reading_empty">よみを入力してください。</string>
+    <string name="dictionary_error_reading_invalid">よみに使えるのは、ひらがな・カタカナ・半角英数字と一部の記号です。</string>
+    <string name="dictionary_error_word_empty">単語を入力してください。</string>
+    <string name="dictionary_error_word_invalid">単語に改行やタブは使えません。</string>
+    <string name="dictionary_error_too_long">よみ・単語が長すぎます。</string>
+
     <string name="settings_appearance">表示</string>
     <string name="settings_keyboard_height">キーボードの高さ: %1$d%%</string>
     <string name="settings_keyboard_height_reset">高さを標準(100%)に戻す</string>
