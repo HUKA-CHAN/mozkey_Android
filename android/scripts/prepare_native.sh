@@ -70,6 +70,9 @@ step_mozc() {
     Darwin) host_config=oss_macos ;;
     *) die "unsupported host: $(uname -s) (use Linux, macOS or WSL)" ;;
   esac
+  # Mozkey's dictionary is built from generated inputs that are not checked in.
+  [[ -f "$SRC_DIR/data/dictionary_koyasi/generated/profiled/mozcdic-ut-daily.txt" ]] ||
+    die "the daily dictionary is missing; run tools/dictionary/prepare_daily_dictionary.ps1 (PowerShell) first"
   (
     cd "$SRC_DIR"
     # Downloads Mozc's third-party sources and the Android NDK used by Bazel.

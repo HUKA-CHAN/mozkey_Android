@@ -55,6 +55,17 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
+      # Mozkey's dictionary needs generated inputs that are not checked in
+      # (same step as the Linux / macOS / Windows workflows).
+      - name: Prepare daily dictionary
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
+        run: |
+          $ErrorActionPreference = "Stop"
+          ./tools/dictionary/prepare_daily_dictionary.ps1
+
       - name: Build native libraries, dictionary, protobuf classes and bundle the model
         run: android/scripts/prepare_native.sh
 

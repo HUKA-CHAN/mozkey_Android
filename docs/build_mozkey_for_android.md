@@ -64,10 +64,11 @@ Actions タブから手動実行 (`workflow_dispatch`) もできます。
 
 ### ローカル (Linux / macOS / WSL)
 
-必要なもの: bazelisk、Python 3.12 以降、JDK 17 以降、Gradle 9.5.0 以降、
+必要なもの: bazelisk、PowerShell 7、Python 3.12 以降、JDK 17 以降、Gradle 9.5.0 以降、
 Android SDK (API 37 のプラットフォームと NDK は Gradle が自動取得します)。
 
 ```
+pwsh ./tools/dictionary/prepare_daily_dictionary.ps1   # Mozkey の辞書入力を生成 (PowerShell 7)
 android/scripts/prepare_native.sh        # libmozc.so、辞書、protobuf、llama.cpp、モデル
 gradle -p android :app:assembleRelease
 adb install -r android/app/build/outputs/apk/release/app-release.apk
