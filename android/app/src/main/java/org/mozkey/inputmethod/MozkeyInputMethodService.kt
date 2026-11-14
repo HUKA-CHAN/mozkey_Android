@@ -135,6 +135,7 @@ class MozkeyInputMethodService :
         val keyboard = KeyboardView(this)
         keyboard.listener = this
         keyboard.hapticEnabled = prefs.haptic
+        keyboard.heightScale = prefs.keyboardHeightPercent / 100f
         root.addView(
             keyboard,
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
@@ -286,6 +287,7 @@ class MozkeyInputMethodService :
                 updateKeyboard()
             }
             Prefs.KEY_HAPTIC -> keyboardView?.hapticEnabled = prefs.haptic
+            Prefs.KEY_KEYBOARD_HEIGHT -> keyboardView?.heightScale = prefs.keyboardHeightPercent / 100f
             Prefs.KEY_ZENZ, Prefs.KEY_LIVE_CONVERSION -> {
                 if (prefs.zenz && prefs.liveConversion) maybeLoadZenz() else releaseZenz()
                 applyConfig()

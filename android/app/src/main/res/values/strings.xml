@@ -16,6 +16,11 @@
     <string name="settings_incognito">シークレットモード(学習しない)</string>
     <string name="settings_haptic">キー入力時に振動する</string>
 
+    <string name="settings_appearance">表示</string>
+    <string name="settings_keyboard_height">キーボードの高さ: %1$d%%</string>
+    <string name="settings_keyboard_height_reset">高さを標準(100%)に戻す</string>
+    <string name="settings_keyboard_height_note">キーの縦の大きさを変えます。キーボードを開いたまま動かすと、その場で反映されます。</string>
+
     <string name="settings_status">同梱データ</string>
     <string name="status_dictionary_ok">変換辞書: 同梱されています</string>
     <string name="status_dictionary_missing">変換辞書: 見つかりません(prepare_native.sh を実行してビルドし直してください)</string>

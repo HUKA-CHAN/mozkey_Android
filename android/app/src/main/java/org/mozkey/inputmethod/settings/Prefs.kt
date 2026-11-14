@@ -32,6 +32,15 @@ class Prefs(context: Context) {
         get() = raw.getBoolean(KEY_HAPTIC, true)
         set(value) = raw.edit().putBoolean(KEY_HAPTIC, value).apply()
 
+    /** Keyboard height in percent of the default key height. */
+    var keyboardHeightPercent: Int
+        get() = raw.getInt(KEY_KEYBOARD_HEIGHT, DEFAULT_KEYBOARD_HEIGHT_PERCENT)
+            .coerceIn(MIN_KEYBOARD_HEIGHT_PERCENT, MAX_KEYBOARD_HEIGHT_PERCENT)
+        set(value) = raw.edit().putInt(
+            KEY_KEYBOARD_HEIGHT,
+            value.coerceIn(MIN_KEYBOARD_HEIGHT_PERCENT, MAX_KEYBOARD_HEIGHT_PERCENT),
+        ).apply()
+
     var incognito: Boolean
         get() = raw.getBoolean(KEY_INCOGNITO, false)
         set(value) = raw.edit().putBoolean(KEY_INCOGNITO, value).apply()
@@ -44,6 +53,10 @@ class Prefs(context: Context) {
         const val KEY_ZENZ_TIMEOUT = "zenz_timeout_msec"
         const val KEY_HAPTIC = "haptic"
         const val KEY_INCOGNITO = "incognito"
+        const val KEY_KEYBOARD_HEIGHT = "keyboard_height_percent"
         const val DEFAULT_ZENZ_TIMEOUT_MSEC = 400
+        const val DEFAULT_KEYBOARD_HEIGHT_PERCENT = 100
+        const val MIN_KEYBOARD_HEIGHT_PERCENT = 70
+        const val MAX_KEYBOARD_HEIGHT_PERCENT = 150
     }
 }

@@ -31,6 +31,16 @@ class KeyboardView(context: Context) : View(context) {
     var listener: Listener? = null
     var hapticEnabled = true
 
+    /** User-selected multiplier for the key height (1.0 = default). */
+    var heightScale = 1f
+        set(value) {
+            if (field != value) {
+                field = value
+                requestLayout()
+                invalidate()
+            }
+        }
+
     private var theme = Theme.from(context)
     private var keyboardLayout: KeyboardLayout = KeyboardLayouts.forMode(KeyboardMode.KANA_FLICK)
     private val placed = ArrayList<PlacedKey>()
@@ -119,7 +129,7 @@ class KeyboardView(context: Context) : View(context) {
         // Shrink the keys on short (landscape) windows so the app stays visible.
         val screenHeightDp = resources.configuration.screenHeightDp
         val scale = if (screenHeightDp in 1 until 480) 0.78f else 1f
-        return dp(keyboardLayout.rowHeightDp * scale)
+        return dp(keyboardLayout.rowHeightDp * scale * heightScale)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.CompoundButton
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 import org.mozkey.inputmethod.R
@@ -77,10 +78,48 @@ class SettingsActivity : Activity() {
         content.addView(toggle(getString(R.string.settings_incognito), prefs.incognito) { prefs.incognito = it })
         content.addView(toggle(getString(R.string.settings_haptic), prefs.haptic) { prefs.haptic = it })
 
+        content.addView(heading(getString(R.string.settings_appearance)))
+        addKeyboardHeightSlider(content)
+
         content.addView(heading(getString(R.string.settings_status)))
         content.addView(note(statusText()))
 
         setContentView(scroll)
+    }
+
+    /** Slider for the keyboard height, in steps of 5 % of the default. */
+    private fun addKeyboardHeightSlider(content: LinearLayout) {
+        val label = TextView(this).apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f) }
+        fun show(percent: Int) {
+            label.text = getString(R.string.settings_keyboard_height, percent)
+        }
+        val steps = (Prefs.MAX_KEYBOARD_HEIGHT_PERCENT - Prefs.MIN_KEYBOARD_HEIGHT_PERCENT) / HEIGHT_STEP
+        val slider = SeekBar(this).apply {
+            max = steps
+            progress = (prefs.keyboardHeightPercent - Prefs.MIN_KEYBOARD_HEIGHT_PERCENT) / HEIGHT_STEP
+            minimumHeight = dp(48f)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
+                    val percent = Prefs.MIN_KEYBOARD_HEIGHT_PERCENT + progress * HEIGHT_STEP
+                    show(percent)
+                    // Applied while dragging, so an open keyboard resizes live.
+                    if (fromUser) prefs.keyboardHeightPercent = percent
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar) {}
+
+                override fun onStopTrackingTouch(seekBar: SeekBar) {}
+            })
+        }
+        show(prefs.keyboardHeightPercent)
+        content.addView(label)
+        content.addView(slider)
+        content.addView(button(getString(R.string.settings_keyboard_height_reset)) {
+            prefs.keyboardHeightPercent = Prefs.DEFAULT_KEYBOARD_HEIGHT_PERCENT
+            slider.progress =
+                (Prefs.DEFAULT_KEYBOARD_HEIGHT_PERCENT - Prefs.MIN_KEYBOARD_HEIGHT_PERCENT) / HEIGHT_STEP
+        })
+        content.addView(note(getString(R.string.settings_keyboard_height_note)))
     }
 
     private fun statusText(): String {
@@ -121,6 +160,10 @@ class SettingsActivity : Activity() {
         this.text = text
         isAllCaps = false
         setOnClickListener { onClick() }
+    }
+
+    private companion object {
+        const val HEIGHT_STEP = 5
     }
 
     private fun toggle(text: String, checked: Boolean, onChange: (Boolean) -> Unit): View =
