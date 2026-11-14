@@ -608,8 +608,8 @@ class MozkeyInputMethodService :
 
     /**
      * Drops the current composition. With [finishInEditor] the visible preedit is
-     * kept as plain text; either way the session is reverted and every output that
-     * is still on its way is ignored.
+     * kept as plain text; either way the session context is reset and every output
+     * that is still on its way is ignored.
      */
     private fun abandonComposition(finishInEditor: Boolean) {
         cancelPendingCallback()
@@ -621,7 +621,9 @@ class MozkeyInputMethodService :
         compositionContext = null
         composingStart = -1
         if (engine.isReady) {
-            engine.sendCommand(MozcMessages.command(SessionCommand.CommandType.REVERT))
+            // RESET_CONTEXT cancels any composition and confirms pending learning.
+            // REVERT must not be used here: with no composition it undoes the
+            // learning of the last committed conversion.
             engine.sendCommand(MozcMessages.command(SessionCommand.CommandType.RESET_CONTEXT))
         }
         candidateBar?.setCandidates(emptyList(), -1)
