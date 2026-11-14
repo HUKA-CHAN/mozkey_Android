@@ -41,9 +41,9 @@ class Prefs(context: Context) {
             value.coerceIn(MIN_KEYBOARD_HEIGHT_PERCENT, MAX_KEYBOARD_HEIGHT_PERCENT),
         ).apply()
 
-    /** Shows the character being entered in a bubble above a flick key. */
+    /** Shows the flick targets around a pressed flick key. */
     var flickPreview: Boolean
-        get() = raw.getBoolean(KEY_FLICK_PREVIEW, false)
+        get() = raw.getBoolean(KEY_FLICK_PREVIEW, true)
         set(value) = raw.edit().putBoolean(KEY_FLICK_PREVIEW, value).apply()
 
     var incognito: Boolean

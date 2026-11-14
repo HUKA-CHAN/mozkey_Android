@@ -31,8 +31,12 @@ class KeyboardView(context: Context) : View(context) {
     var listener: Listener? = null
     var hapticEnabled = true
 
-    /** Shows the character a flick key is about to enter in a bubble above it. */
-    var flickPreviewEnabled = false
+    /** Shows the flick targets around a pressed flick key. */
+    var flickPreviewEnabled = true
+
+    /** Space above / below this view that the flick guide may draw into, in pixels. */
+    var overflowTop = 0f
+    var overflowBottom = 0f
 
     /** User-selected multiplier for the key height (1.0 = default). */
     var heightScale = 1f
@@ -55,6 +59,7 @@ class KeyboardView(context: Context) : View(context) {
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
     private val hintPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
+    private val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
 
     private val gap = dp(3f)
     private val padding = dp(4f)
@@ -192,16 +197,25 @@ class KeyboardView(context: Context) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(theme.background)
+        // Fill only this view's own area: the parent does not clip its children, so
+        // Canvas.drawColor() would also paint over the candidate bar above.
+        keyPaint.color = theme.background
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), keyPaint)
+        outlinePaint.color = theme.hintText
+        outlinePaint.strokeWidth = dp(1f)
         val touch = active
+        val guide = flickPreviewEnabled
         for (item in placed) {
             val key = item.key
             val rect = item.rect
             val pressed = touch != null && touch.placed === item
             val shiftOn = shifted && (key.action as? KeyAction.Function)?.key == FunctionKey.SHIFT
 
+            // With the flick guide the pressed key stands for "no flick" and is
+            // highlighted only while the center is selected.
+            val centerSelected = pressed && key.hasFlicks && (!guide || touch.direction == -1)
             keyPaint.color = when {
-                pressed && key.hasFlicks -> theme.accent
+                centerSelected -> theme.accent
                 pressed -> theme.pressedKey
                 shiftOn -> theme.accent
                 key.functional -> theme.functionalKey
@@ -210,11 +224,11 @@ class KeyboardView(context: Context) : View(context) {
             canvas.drawRoundRect(rect, corner, corner, keyPaint)
 
             var label = displayLabel(key)
-            if (pressed && touch.direction >= 0) {
+            if (pressed && !guide && touch.direction >= 0) {
                 key.flicks.getOrNull(touch.direction)?.let { label = it.label }
             }
 
-            labelPaint.color = if ((pressed && key.hasFlicks) || shiftOn) theme.onAccent else theme.text
+            labelPaint.color = if (centerSelected || shiftOn) theme.onAccent else theme.text
             val base = rect.height() * if (key.functional || label.length > 1) 0.30f else 0.42f
             labelPaint.textSize = base
             // Long labels ("space", "小゛゜") must not overflow the key.
@@ -232,30 +246,51 @@ class KeyboardView(context: Context) : View(context) {
     }
 
     /**
-     * Bubble above the pressed flick key with the character that will be entered
-     * on release, so it stays visible while the finger covers the key. For the top
-     * row the bubble is drawn over the candidate bar; the parent view disables
-     * child clipping for that.
+     * Flick guide: one bubble per flick target, placed on the side of the pressed
+     * key the finger has to move to, with the currently selected one highlighted.
+     * Bubbles may extend over the candidate bar (top row) and into the padding
+     * below the keys; the parent view disables child clipping for that.
      */
     private fun drawFlickPreview(canvas: Canvas, touch: ActiveTouch) {
         val key = touch.placed.key
         val rect = touch.placed.rect
-        val label = (if (touch.direction >= 0) key.flicks.getOrNull(touch.direction)?.label else null)
-            ?: key.label
+        val minimum = rect.height() * 0.45f
 
-        val bubbleHeight = dp(PREVIEW_HEIGHT_DP)
-        val bubbleWidth = maxOf(rect.width() * 0.9f, dp(52f)).coerceAtMost(width.toFloat())
-        val left = (rect.centerX() - bubbleWidth / 2f).coerceIn(0f, width - bubbleWidth)
-        val bottom = rect.top - dp(2f)
-        previewRect.set(left, bottom - bubbleHeight, left + bubbleWidth, bottom)
+        for (direction in Key.LEFT..Key.DOWN) {
+            val flick = key.flicks.getOrNull(direction) ?: continue
+            when (direction) {
+                Key.LEFT -> previewRect.set(rect.left - gap - rect.width(), rect.top, rect.left - gap, rect.bottom)
+                Key.RIGHT -> previewRect.set(rect.right + gap, rect.top, rect.right + gap + rect.width(), rect.bottom)
+                Key.UP -> {
+                    // Room above: the rest of this view plus the candidate bar.
+                    val room = rect.top - gap + overflowTop
+                    val bubble = rect.height().coerceAtMost(room).coerceAtLeast(minimum)
+                    val bottom = rect.top - gap
+                    previewRect.set(rect.left, bottom - bubble, rect.right, bottom)
+                }
+                else -> {
+                    // Room below: the rest of this view plus the padding under it.
+                    // Without enough room the bubble overlaps the lower part of the key.
+                    val room = height - rect.bottom - gap + overflowBottom
+                    val bubble = rect.height().coerceAtMost(room).coerceAtLeast(minimum)
+                    val top = (rect.bottom + gap).coerceAtMost(height + overflowBottom - bubble)
+                    previewRect.set(rect.left, top, rect.right, top + bubble)
+                }
+            }
+            // Keep the side bubbles inside the keyboard.
+            if (previewRect.left < 0f) previewRect.offset(-previewRect.left, 0f)
+            if (previewRect.right > width) previewRect.offset(width - previewRect.right, 0f)
 
-        keyPaint.color = theme.accent
-        canvas.drawRoundRect(previewRect, corner, corner, keyPaint)
+            val selected = touch.direction == direction
+            keyPaint.color = if (selected) theme.accent else theme.key
+            canvas.drawRoundRect(previewRect, corner, corner, keyPaint)
+            if (!selected) canvas.drawRoundRect(previewRect, corner, corner, outlinePaint)
 
-        labelPaint.color = theme.onAccent
-        labelPaint.textSize = bubbleHeight * 0.62f
-        val baseline = previewRect.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
-        canvas.drawText(label, previewRect.centerX(), baseline, labelPaint)
+            labelPaint.color = if (selected) theme.onAccent else theme.text
+            labelPaint.textSize = minOf(rect.height() * 0.42f, previewRect.height() * 0.62f)
+            val baseline = previewRect.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
+            canvas.drawText(flick.label, previewRect.centerX(), baseline, labelPaint)
+        }
     }
 
     private fun drawFlickHints(canvas: Canvas, key: Key, rect: RectF) {
@@ -366,8 +401,5 @@ class KeyboardView(context: Context) : View(context) {
         private const val REPEAT_START_MS = 400L
         private const val REPEAT_INTERVAL_MS = 55L
         private const val LONG_PRESS_MS = 500L
-
-        /** Must fit inside the candidate bar (44 dp) that sits above the top row. */
-        private const val PREVIEW_HEIGHT_DP = 40f
     }
 }

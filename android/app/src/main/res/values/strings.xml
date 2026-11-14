@@ -40,7 +40,7 @@
     <string name="settings_keyboard_height_reset">高さを標準(100%)に戻す</string>
     <string name="settings_keyboard_height_note">キーの縦の大きさを変えます。キーボードを開いたまま動かすと、その場で反映されます。</string>
 
-    <string name="settings_flick_preview">フリック中の文字をキーの上に表示する</string>
+    <string name="settings_flick_preview">フリック中に上下左右の文字を表示する</string>
 
     <string name="settings_status">同梱データ</string>
     <string name="status_dictionary_ok">変換辞書: 同梱されています</string>

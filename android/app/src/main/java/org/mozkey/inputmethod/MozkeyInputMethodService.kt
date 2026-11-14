@@ -125,7 +125,7 @@ class MozkeyInputMethodService :
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(theme.background)
-            // Lets the flick preview of the top key row extend over the candidate bar.
+            // Lets the flick guide extend over the candidate bar and the bottom padding.
             clipChildren = false
             clipToPadding = false
         }
@@ -142,6 +142,7 @@ class MozkeyInputMethodService :
         keyboard.hapticEnabled = prefs.haptic
         keyboard.heightScale = prefs.keyboardHeightPercent / 100f
         keyboard.flickPreviewEnabled = prefs.flickPreview
+        keyboard.overflowTop = barHeight.toFloat()
         root.addView(
             keyboard,
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
@@ -155,6 +156,7 @@ class MozkeyInputMethodService :
                     WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
                 )
                 view.setPadding(bars.left, 0, bars.right, bars.bottom)
+                keyboard.overflowBottom = bars.bottom.toFloat()
                 insets
             }
         }
