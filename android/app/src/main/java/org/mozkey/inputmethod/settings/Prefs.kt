@@ -43,7 +43,7 @@ class Prefs(context: Context) {
 
     /** Shows the character being entered in a bubble above a flick key. */
     var flickPreview: Boolean
-        get() = raw.getBoolean(KEY_FLICK_PREVIEW, true)
+        get() = raw.getBoolean(KEY_FLICK_PREVIEW, false)
         set(value) = raw.edit().putBoolean(KEY_FLICK_PREVIEW, value).apply()
 
     var incognito: Boolean

@@ -32,7 +32,7 @@ class KeyboardView(context: Context) : View(context) {
     var hapticEnabled = true
 
     /** Shows the character a flick key is about to enter in a bubble above it. */
-    var flickPreviewEnabled = true
+    var flickPreviewEnabled = false
 
     /** User-selected multiplier for the key height (1.0 = default). */
     var heightScale = 1f
