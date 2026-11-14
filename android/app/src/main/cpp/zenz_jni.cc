@@ -112,6 +112,16 @@ Java_org_mozkey_inputmethod_zenz_ZenzNative_nativeUnload(JNIEnv*, jclass) {
   UnloadLocked();
 }
 
+JNIEXPORT jstring JNICALL
+Java_org_mozkey_inputmethod_zenz_ZenzNative_nativeGetStats(JNIEnv* env,
+                                                           jclass) {
+  std::lock_guard<std::mutex> lock(g_mutex);
+  if (g_runtime == nullptr) {
+    return env->NewStringUTF("");
+  }
+  return env->NewStringUTF(g_runtime->Stats().c_str());
+}
+
 JNIEXPORT jboolean JNICALL
 Java_org_mozkey_inputmethod_zenz_ZenzNative_nativeIsLoaded(JNIEnv*, jclass) {
   std::lock_guard<std::mutex> lock(g_mutex);

@@ -1,6 +1,7 @@
 #ifndef MOZKEY_ANDROID_ZENZ_LLAMA_BACKEND_H_
 #define MOZKEY_ANDROID_ZENZ_LLAMA_BACKEND_H_
 
+#include <atomic>
 #include <cstdint>
 #include <mutex>
 #include <string>
@@ -49,6 +50,10 @@ class ZenzLlamaRuntime {
                   MozkeyZenzShouldStopFn should_stop, void* stop_context,
                   std::string* value, std::string* debug);
 
+  // Counters since process start, for the diagnostics screen. One line per
+  // item, "name=value". Contains no user text.
+  std::string Stats() const;
+
   // C trampoline matching MozkeyZenzConvertFn; |user_data| is the runtime.
   static int32_t ConvertTrampoline(void* user_data, const char* prompt,
                                    uint32_t prompt_size, uint32_t timeout_msec,
@@ -69,6 +74,14 @@ class ZenzLlamaRuntime {
   const llama_vocab* vocab_ = nullptr;
   // Tokens currently materialized in the KV cache (sequence 0).
   std::vector<int32_t> cached_tokens_;
+
+  std::atomic<uint32_t> stat_requests_{0};
+  std::atomic<uint32_t> stat_ok_{0};
+  std::atomic<uint32_t> stat_timeout_{0};
+  std::atomic<uint32_t> stat_error_{0};
+  std::atomic<uint32_t> stat_last_msec_{0};
+  mutable std::mutex stat_mutex_;
+  std::string stat_last_debug_;
 };
 
 // Exposed for unit tests.

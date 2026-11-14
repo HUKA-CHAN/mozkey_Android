@@ -42,6 +42,10 @@
 
     <string name="settings_flick_preview">フリック中に上下左右の文字を表示する</string>
 
+    <string name="settings_diagnostics">診断</string>
+    <string name="settings_diagnostics_refresh">診断情報を更新</string>
+    <string name="settings_diagnostics_note">変換処理がどこまで進んだかを示す件数です。入力した文字は含みません。長押しでコピーできます。</string>
+
     <string name="settings_status">同梱データ</string>
     <string name="status_dictionary_ok">変換辞書: 同梱されています</string>
     <string name="status_dictionary_missing">変換辞書: 見つかりません(prepare_native.sh を実行してビルドし直してください)</string>

@@ -11,4 +11,8 @@ internal object ZenzNative {
 
     @JvmStatic
     external fun nativeIsLoaded(): Boolean
+
+    /** Request counters of the runtime, one "name=value" per line. No user text. */
+    @JvmStatic
+    external fun nativeGetStats(): String
 }

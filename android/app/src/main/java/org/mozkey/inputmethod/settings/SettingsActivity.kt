@@ -19,6 +19,7 @@ import android.widget.Switch
 import android.widget.TextView
 import org.mozkey.inputmethod.R
 import org.mozkey.inputmethod.dictionary.UserDictionaryActivity
+import org.mozkey.inputmethod.engine.Diagnostics
 import org.mozkey.inputmethod.engine.MozcEngine
 import org.mozkey.inputmethod.zenz.ZenzManager
 import java.io.IOException
@@ -93,6 +94,19 @@ class SettingsActivity : Activity() {
         content.addView(heading(getString(R.string.settings_status)))
         content.addView(note(statusText()))
 
+        content.addView(heading(getString(R.string.settings_diagnostics)))
+        val diagnostics = TextView(this).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = android.graphics.Typeface.MONOSPACE
+            setTextIsSelectable(true)
+            text = diagnosticsText()
+        }
+        content.addView(button(getString(R.string.settings_diagnostics_refresh)) {
+            diagnostics.text = diagnosticsText()
+        })
+        content.addView(diagnostics)
+        content.addView(note(getString(R.string.settings_diagnostics_note)))
+
         setContentView(scroll)
     }
 
@@ -138,6 +152,27 @@ class SettingsActivity : Activity() {
             append(getString(if (dictionary) R.string.status_dictionary_ok else R.string.status_dictionary_missing))
             append('\n')
             append(getString(if (model) R.string.status_model_ok else R.string.status_model_missing))
+        }
+    }
+
+    /** Numbers and flags only; never any typed text. */
+    private fun diagnosticsText(): String {
+        val zenz = ZenzManager.current
+        return buildString {
+            append("service=").append(if (MozcEngine.current != null) "running" else "stopped").append('\n')
+            append("engine_ready=").append(Diagnostics.engineReady).append('\n')
+            append("config_live_conversion=").append(Diagnostics.configLiveConversion).append('\n')
+            append("config_zenz=").append(Diagnostics.configZenz).append('\n')
+            append("config_zenz_timeout_msec=").append(Diagnostics.configZenzTimeoutMsec).append('\n')
+            append("zenz_state=").append(zenz?.state?.name ?: "-").append('\n')
+            append("zenz_error=").append(zenz?.lastError ?: "-").append('\n')
+            append("keys_sent=").append(Diagnostics.keysSent.get()).append('\n')
+            append("live_conversion_callbacks=").append(Diagnostics.liveConversionCallbacks.get()).append('\n')
+            append("zenz_callbacks=").append(Diagnostics.zenzCallbacks.get()).append('\n')
+            append("zenz_pending_outputs=").append(Diagnostics.zenzPendingOutputs.get()).append('\n')
+            append("zenz_applied_outputs=").append(Diagnostics.zenzAppliedOutputs.get()).append('\n')
+            append("--- zenz runtime ---\n")
+            append(zenz?.nativeStats()?.ifEmpty { "-" } ?: "-")
         }
     }
 

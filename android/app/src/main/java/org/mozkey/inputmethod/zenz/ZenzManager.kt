@@ -30,6 +30,9 @@ class ZenzManager(private val appContext: Context) {
 
     val isLoaded: Boolean get() = state == State.LOADED
 
+    /** Counters of the native runtime, or null before the library is loaded. */
+    fun nativeStats(): String? = if (libraryLoaded) ZenzNative.nativeGetStats() else null
+
     /** Loads the model if it is not loaded yet. [onDone] runs on the Zenz thread. */
     fun loadAsync(onDone: (Boolean) -> Unit) {
         if (state == State.LOADED || state == State.LOADING) {
@@ -108,5 +111,9 @@ class ZenzManager(private val appContext: Context) {
 
         @Volatile
         private var libraryLoaded = false
+
+        /** The manager of the running IME service, if any (for the diagnostics screen). */
+        @Volatile
+        var current: ZenzManager? = null
     }
 }

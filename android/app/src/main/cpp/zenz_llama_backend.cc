@@ -413,6 +413,22 @@ int32_t ZenzLlamaRuntime::Convert(const char* prompt, uint32_t prompt_size,
   return MOZKEY_ZENZ_STATUS_OK;
 }
 
+std::string ZenzLlamaRuntime::Stats() const {
+  std::string last_debug;
+  {
+    std::lock_guard<std::mutex> lock(stat_mutex_);
+    last_debug = stat_last_debug_;
+  }
+  std::string result;
+  result += "requests=" + std::to_string(stat_requests_.load()) + "\n";
+  result += "ok=" + std::to_string(stat_ok_.load()) + "\n";
+  result += "timeout=" + std::to_string(stat_timeout_.load()) + "\n";
+  result += "error=" + std::to_string(stat_error_.load()) + "\n";
+  result += "last_msec=" + std::to_string(stat_last_msec_.load()) + "\n";
+  result += "last_result=" + (last_debug.empty() ? "-" : last_debug);
+  return result;
+}
+
 int32_t ZenzLlamaRuntime::ConvertTrampoline(
     void* user_data, const char* prompt, uint32_t prompt_size,
     uint32_t timeout_msec, uint32_t max_output_chars,
@@ -427,9 +443,26 @@ int32_t ZenzLlamaRuntime::ConvertTrampoline(
   ZenzLlamaRuntime* runtime = static_cast<ZenzLlamaRuntime*>(user_data);
   std::string value;
   std::string debug;
+  const Clock::time_point start = Clock::now();
   const int32_t status =
       runtime->Convert(prompt, prompt_size, timeout_msec, max_output_chars,
                        should_stop, stop_context, &value, &debug);
+  ++runtime->stat_requests_;
+  runtime->stat_last_msec_ = static_cast<uint32_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() -
+                                                            start)
+          .count());
+  if (status == MOZKEY_ZENZ_STATUS_OK) {
+    ++runtime->stat_ok_;
+  } else if (status == MOZKEY_ZENZ_STATUS_TIMEOUT) {
+    ++runtime->stat_timeout_;
+  } else {
+    ++runtime->stat_error_;
+  }
+  {
+    std::lock_guard<std::mutex> lock(runtime->stat_mutex_);
+    runtime->stat_last_debug_ = debug;
+  }
   if (status != MOZKEY_ZENZ_STATUS_OK) {
     return status;
   }

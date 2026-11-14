@@ -27,6 +27,7 @@ import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Preedit
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.Result
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoCommands.SessionCommand
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoConfig.Config
+import org.mozkey.inputmethod.engine.Diagnostics
 import org.mozkey.inputmethod.engine.MozcEngine
 import org.mozkey.inputmethod.engine.MozcMessages
 import org.mozkey.inputmethod.keyboard.CandidateBarView
@@ -99,9 +100,11 @@ class MozkeyInputMethodService :
         prefs = Prefs(this)
         prefs.raw.registerOnSharedPreferenceChangeListener(this)
         zenz = ZenzManager(applicationContext)
+        ZenzManager.current = zenz
         engine = MozcEngine(this)
         MozcEngine.current = engine
         engine.initialize { ok ->
+            Diagnostics.engineReady = ok
             if (ok) {
                 engine.setRequest(MozcMessages.mobileRequest(prefs.kanaLayout))
                 applyConfig()
@@ -115,6 +118,7 @@ class MozkeyInputMethodService :
         cancelPendingCallback()
         engine.syncData()
         if (MozcEngine.current === engine) MozcEngine.current = null
+        if (ZenzManager.current === zenz) ZenzManager.current = null
         super.onDestroy()
     }
 
@@ -264,6 +268,9 @@ class MozkeyInputMethodService :
         val zenzActive = liveConversion && prefs.zenz && zenz.isLoaded
         val timeout = prefs.zenzTimeoutMsec
         val incognito = prefs.incognito || fieldIncognito || fieldIsPassword
+        Diagnostics.configLiveConversion = liveConversion
+        Diagnostics.configZenz = zenzActive
+        Diagnostics.configZenzTimeoutMsec = timeout
         engine.updateConfig { config ->
             config.sessionKeymap = Config.SessionKeymap.MOBILE
             config.useLiveConversion = liveConversion
@@ -399,6 +406,7 @@ class MozkeyInputMethodService :
         }
         val sentEpoch = epoch
         inFlight++
+        Diagnostics.keysSent.incrementAndGet()
         engine.sendKey(key, compositionContext) { output ->
             if (sentEpoch != epoch) return@sendKey
             inFlight--
@@ -487,6 +495,8 @@ class MozkeyInputMethodService :
                 else -> CandidateBarView.Status.NONE
             }
         )
+        if (output.zenzLiveCorrectionPending) Diagnostics.zenzPendingOutputs.incrementAndGet()
+        if (output.zenzLiveCorrectionApplied) Diagnostics.zenzAppliedOutputs.incrementAndGet()
         updateDynamicLabels()
         scheduleCallback(output)
     }
@@ -575,6 +585,13 @@ class MozkeyInputMethodService :
         cancelPendingCallback()
         if (!output.hasCallback() || !output.callback.hasSessionCommand()) return
         val command = output.callback.sessionCommand
+        when (command.type) {
+            SessionCommand.CommandType.APPLY_LIVE_CONVERSION ->
+                Diagnostics.liveConversionCallbacks.incrementAndGet()
+            SessionCommand.CommandType.APPLY_ZENZ_LIVE_CORRECTION ->
+                Diagnostics.zenzCallbacks.incrementAndGet()
+            else -> {}
+        }
         val delay = output.callback.delayMillisec.toLong().coerceIn(0L, 10_000L)
         val runnable = Runnable {
             pendingCallback = null
