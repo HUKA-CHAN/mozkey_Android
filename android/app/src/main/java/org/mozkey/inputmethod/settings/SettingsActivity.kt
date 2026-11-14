@@ -80,6 +80,9 @@ class SettingsActivity : Activity() {
 
         content.addView(heading(getString(R.string.settings_appearance)))
         addKeyboardHeightSlider(content)
+        content.addView(toggle(getString(R.string.settings_flick_preview), prefs.flickPreview) {
+            prefs.flickPreview = it
+        })
 
         content.addView(heading(getString(R.string.settings_status)))
         content.addView(note(statusText()))

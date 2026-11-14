@@ -123,6 +123,9 @@ class MozkeyInputMethodService :
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(theme.background)
+            // Lets the flick preview of the top key row extend over the candidate bar.
+            clipChildren = false
+            clipToPadding = false
         }
 
         val bar = CandidateBarView(this)
@@ -136,6 +139,7 @@ class MozkeyInputMethodService :
         keyboard.listener = this
         keyboard.hapticEnabled = prefs.haptic
         keyboard.heightScale = prefs.keyboardHeightPercent / 100f
+        keyboard.flickPreviewEnabled = prefs.flickPreview
         root.addView(
             keyboard,
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
@@ -287,6 +291,7 @@ class MozkeyInputMethodService :
                 updateKeyboard()
             }
             Prefs.KEY_HAPTIC -> keyboardView?.hapticEnabled = prefs.haptic
+            Prefs.KEY_FLICK_PREVIEW -> keyboardView?.flickPreviewEnabled = prefs.flickPreview
             Prefs.KEY_KEYBOARD_HEIGHT -> keyboardView?.heightScale = prefs.keyboardHeightPercent / 100f
             Prefs.KEY_ZENZ, Prefs.KEY_LIVE_CONVERSION -> {
                 if (prefs.zenz && prefs.liveConversion) maybeLoadZenz() else releaseZenz()

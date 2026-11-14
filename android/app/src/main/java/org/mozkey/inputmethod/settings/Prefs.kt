@@ -41,6 +41,11 @@ class Prefs(context: Context) {
             value.coerceIn(MIN_KEYBOARD_HEIGHT_PERCENT, MAX_KEYBOARD_HEIGHT_PERCENT),
         ).apply()
 
+    /** Shows the character being entered in a bubble above a flick key. */
+    var flickPreview: Boolean
+        get() = raw.getBoolean(KEY_FLICK_PREVIEW, true)
+        set(value) = raw.edit().putBoolean(KEY_FLICK_PREVIEW, value).apply()
+
     var incognito: Boolean
         get() = raw.getBoolean(KEY_INCOGNITO, false)
         set(value) = raw.edit().putBoolean(KEY_INCOGNITO, value).apply()
@@ -54,6 +59,7 @@ class Prefs(context: Context) {
         const val KEY_HAPTIC = "haptic"
         const val KEY_INCOGNITO = "incognito"
         const val KEY_KEYBOARD_HEIGHT = "keyboard_height_percent"
+        const val KEY_FLICK_PREVIEW = "flick_preview"
         const val DEFAULT_ZENZ_TIMEOUT_MSEC = 400
         const val DEFAULT_KEYBOARD_HEIGHT_PERCENT = 100
         const val MIN_KEYBOARD_HEIGHT_PERCENT = 70

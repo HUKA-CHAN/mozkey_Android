@@ -31,6 +31,9 @@ class KeyboardView(context: Context) : View(context) {
     var listener: Listener? = null
     var hapticEnabled = true
 
+    /** Shows the character a flick key is about to enter in a bubble above it. */
+    var flickPreviewEnabled = true
+
     /** User-selected multiplier for the key height (1.0 = default). */
     var heightScale = 1f
         set(value) {
@@ -57,6 +60,7 @@ class KeyboardView(context: Context) : View(context) {
     private val padding = dp(4f)
     private val corner = dp(7f)
     private val flickThreshold = dp(18f)
+    private val previewRect = RectF()
 
     private val timer = Handler(Looper.getMainLooper())
     private var active: ActiveTouch? = null
@@ -222,6 +226,36 @@ class KeyboardView(context: Context) : View(context) {
 
             if (key.hasFlicks && !pressed) drawFlickHints(canvas, key, rect)
         }
+        if (flickPreviewEnabled && touch != null && touch.placed.key.hasFlicks) {
+            drawFlickPreview(canvas, touch)
+        }
+    }
+
+    /**
+     * Bubble above the pressed flick key with the character that will be entered
+     * on release, so it stays visible while the finger covers the key. For the top
+     * row the bubble is drawn over the candidate bar; the parent view disables
+     * child clipping for that.
+     */
+    private fun drawFlickPreview(canvas: Canvas, touch: ActiveTouch) {
+        val key = touch.placed.key
+        val rect = touch.placed.rect
+        val label = (if (touch.direction >= 0) key.flicks.getOrNull(touch.direction)?.label else null)
+            ?: key.label
+
+        val bubbleHeight = dp(PREVIEW_HEIGHT_DP)
+        val bubbleWidth = maxOf(rect.width() * 0.9f, dp(52f)).coerceAtMost(width.toFloat())
+        val left = (rect.centerX() - bubbleWidth / 2f).coerceIn(0f, width - bubbleWidth)
+        val bottom = rect.top - dp(2f)
+        previewRect.set(left, bottom - bubbleHeight, left + bubbleWidth, bottom)
+
+        keyPaint.color = theme.accent
+        canvas.drawRoundRect(previewRect, corner, corner, keyPaint)
+
+        labelPaint.color = theme.onAccent
+        labelPaint.textSize = bubbleHeight * 0.62f
+        val baseline = previewRect.centerY() - (labelPaint.descent() + labelPaint.ascent()) / 2f
+        canvas.drawText(label, previewRect.centerX(), baseline, labelPaint)
     }
 
     private fun drawFlickHints(canvas: Canvas, key: Key, rect: RectF) {
@@ -332,5 +366,8 @@ class KeyboardView(context: Context) : View(context) {
         private const val REPEAT_START_MS = 400L
         private const val REPEAT_INTERVAL_MS = 55L
         private const val LONG_PRESS_MS = 500L
+
+        /** Must fit inside the candidate bar (44 dp) that sits above the top row. */
+        private const val PREVIEW_HEIGHT_DP = 40f
     }
 }
