@@ -12,6 +12,14 @@ mozc_cc_library(
 )
 
 mozc_cc_library(
+    name = "inprocess_abi",
+    hdrs = ["zenz_inprocess_abi.h"],
+    visibility = [
+        "//session:__pkg__",
+    ],
+)
+
+mozc_cc_library(
     name = "unix_socket_path",
     srcs = ["zenz_unix_socket_path.cc"],
     hdrs = ["zenz_unix_socket_path.h"],

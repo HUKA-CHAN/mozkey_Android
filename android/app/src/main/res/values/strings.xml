@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mozkey</string>
+    <string name="ime_name">Mozkey 日本語入力</string>
+    <string name="subtype_japanese">日本語</string>
+
+    <string name="settings_setup">セットアップ</string>
+    <string name="settings_enable">1. キーボードを有効にする</string>
+    <string name="settings_select">2. Mozkey に切り替える</string>
+
+    <string name="settings_input">入力</string>
+    <string name="settings_qwerty">かな入力に QWERTY(ローマ字)を使う</string>
+    <string name="settings_live_conversion">ライブ変換</string>
+    <string name="settings_zenz">Zenz による文脈補正</string>
+    <string name="settings_zenz_note">Zenz は端末内で動作します。ライブ変換がオンのときだけ働きます。</string>
+    <string name="settings_incognito">シークレットモード(学習しない)</string>
+    <string name="settings_haptic">キー入力時に振動する</string>
+
+    <string name="settings_status">同梱データ</string>
+    <string name="status_dictionary_ok">変換辞書: 同梱されています</string>
+    <string name="status_dictionary_missing">変換辞書: 見つかりません(prepare_native.sh を実行してビルドし直してください)</string>
+    <string name="status_model_ok">Zenz モデル: 同梱されています</string>
+    <string name="status_model_missing">Zenz モデル: 同梱されていません(Zenz 補正は無効になります)</string>
+</resources>

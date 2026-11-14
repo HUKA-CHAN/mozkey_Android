@@ -19,8 +19,10 @@ class ZenzClient;
 //
 // This factory keeps Session independent from concrete IPC transports.  The
 // Windows uses the existing named-pipe client. macOS uses a local Unix-domain
-// socket client. Other platforms retain the unavailable named-pipe fallback
-// until a platform transport is explicitly implemented.
+// socket client. Android uses the in-process client backed by a runtime that
+// registers itself via mozkey_zenz_register_backend(). Other platforms retain
+// the unavailable named-pipe fallback until a platform transport is explicitly
+// implemented.
 std::unique_ptr<ZenzClient> CreateZenzClient();
 
 #if defined(__APPLE__) && TARGET_OS_OSX
