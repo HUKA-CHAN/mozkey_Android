@@ -302,6 +302,8 @@ class MozkeyInputMethodService :
                 updateKeyboard()
             }
             Prefs.KEY_HAPTIC -> keyboardView?.hapticEnabled = prefs.haptic
+            // Colors are read when the views are created, so build them again.
+            Prefs.KEY_KEYBOARD_THEME, Prefs.KEY_KEY_BORDERS -> setInputView(onCreateInputView())
             Prefs.KEY_FLICK_PREVIEW -> keyboardView?.flickPreviewEnabled = prefs.flickPreview
             Prefs.KEY_KEYBOARD_HEIGHT -> keyboardView?.heightScale = prefs.keyboardHeightPercent / 100f
             Prefs.KEY_ZENZ, Prefs.KEY_LIVE_CONVERSION -> {

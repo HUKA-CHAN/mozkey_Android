@@ -3,32 +3,26 @@ package org.mozkey.inputmethod.dictionary
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.DialogInterface
-import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
-import android.util.TypedValue
-import android.view.ViewGroup
-import android.view.WindowInsets
 import android.widget.ArrayAdapter
-import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ListView
 import android.widget.Spinner
-import android.widget.TextView
 import android.widget.Toast
 import org.mozc.android.inputmethod.japanese.protobuf.ProtoUserDictionaryStorage.UserDictionary.PosType
 import org.mozkey.inputmethod.R
 import org.mozkey.inputmethod.engine.MozcEngine
+import org.mozkey.inputmethod.settings.Ui
 import java.io.IOException
 
 /** Lists the registered words and lets the user add, edit and delete them. */
 class UserDictionaryActivity : Activity() {
 
     private val entries = ArrayList<UserDictionaryStore.Entry>()
-    private lateinit var adapter: ArrayAdapter<String>
-    private lateinit var emptyView: TextView
+    private lateinit var ui: Ui
+    private lateinit var listHolder: LinearLayout
 
     /** Parts of speech offered in the dialog, most common first. */
     private val partsOfSpeech = listOf(
@@ -51,46 +45,21 @@ class UserDictionaryActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setTitle(R.string.dictionary_title)
+        ui = Ui(this)
+        val content = ui.createPage(this)
 
-        val root = LinearLayout(this).apply {
+        content.addView(ui.header(getString(R.string.dictionary_title), getString(R.string.dictionary_subtitle)))
+        val actions = LinearLayout(this).apply {
+            setPadding(0, ui.dp(8f), 0, ui.dp(4f))
+            addView(ui.primaryButton(getString(R.string.dictionary_add)) { showEditor(-1) })
+        }
+        content.addView(actions)
+
+        listHolder = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            val pad = dp(16f)
-            setPadding(pad, pad, pad, pad)
+            setPadding(0, ui.dp(12f), 0, 0)
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            val pad = dp(16f)
-            root.setOnApplyWindowInsetsListener { view, insets ->
-                val bars = insets.getInsets(
-                    WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout() or WindowInsets.Type.ime()
-                )
-                view.setPadding(bars.left + pad, bars.top + pad, bars.right + pad, bars.bottom + pad)
-                insets
-            }
-        }
-
-        root.addView(Button(this).apply {
-            text = getString(R.string.dictionary_add)
-            isAllCaps = false
-            setOnClickListener { showEditor(-1) }
-        })
-
-        emptyView = TextView(this).apply {
-            text = getString(R.string.dictionary_empty)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            alpha = 0.75f
-            setPadding(0, dp(16f), 0, 0)
-        }
-        root.addView(emptyView)
-
-        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, ArrayList<String>())
-        val list = ListView(this).apply {
-            adapter = this@UserDictionaryActivity.adapter
-            setOnItemClickListener { _, _, position, _ -> showEditor(position) }
-        }
-        root.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-
-        setContentView(root)
+        content.addView(listHolder)
 
         try {
             entries.addAll(UserDictionaryStore.load(this))
@@ -101,17 +70,24 @@ class UserDictionaryActivity : Activity() {
         refreshList()
     }
 
-    private fun dp(value: Float): Int =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
+    private fun dp(value: Float): Int = ui.dp(value)
 
     private fun posLabel(pos: PosType): String =
         partsOfSpeech.firstOrNull { it.first == pos }?.second ?: pos.name
 
+    /** Rebuilds the card of registered words. */
     private fun refreshList() {
-        adapter.clear()
-        adapter.addAll(entries.map { "${it.reading}  →  ${it.word}  (${posLabel(it.pos)})" })
-        adapter.notifyDataSetChanged()
-        emptyView.visibility = if (entries.isEmpty()) TextView.VISIBLE else TextView.GONE
+        listHolder.removeAllViews()
+        if (entries.isEmpty()) {
+            listHolder.addView(
+                ui.card(ui.block(ui.label(getString(R.string.dictionary_empty), 14f, ui.secondary)))
+            )
+            return
+        }
+        val rows = entries.mapIndexed { index, entry ->
+            ui.actionRow(entry.word, "${entry.reading} · ${posLabel(entry.pos)}") { showEditor(index) }
+        }
+        listHolder.addView(ui.card(*rows.toTypedArray()))
     }
 
     /** Opens the add dialog ([index] < 0) or the edit dialog for an existing entry. */

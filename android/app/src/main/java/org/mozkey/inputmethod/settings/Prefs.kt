@@ -46,6 +46,16 @@ class Prefs(context: Context) {
         get() = raw.getBoolean(KEY_FLICK_PREVIEW, true)
         set(value) = raw.edit().putBoolean(KEY_FLICK_PREVIEW, value).apply()
 
+    /** One of the Theme.ID_* values. */
+    var keyboardTheme: String
+        get() = raw.getString(KEY_KEYBOARD_THEME, DEFAULT_KEYBOARD_THEME) ?: DEFAULT_KEYBOARD_THEME
+        set(value) = raw.edit().putString(KEY_KEYBOARD_THEME, value).apply()
+
+    /** Draws a key shape behind every key; off gives a flat, borderless keyboard. */
+    var keyBorders: Boolean
+        get() = raw.getBoolean(KEY_KEY_BORDERS, true)
+        set(value) = raw.edit().putBoolean(KEY_KEY_BORDERS, value).apply()
+
     var incognito: Boolean
         get() = raw.getBoolean(KEY_INCOGNITO, false)
         set(value) = raw.edit().putBoolean(KEY_INCOGNITO, value).apply()
@@ -60,6 +70,9 @@ class Prefs(context: Context) {
         const val KEY_INCOGNITO = "incognito"
         const val KEY_KEYBOARD_HEIGHT = "keyboard_height_percent"
         const val KEY_FLICK_PREVIEW = "flick_preview"
+        const val KEY_KEYBOARD_THEME = "keyboard_theme"
+        const val KEY_KEY_BORDERS = "key_borders"
+        const val DEFAULT_KEYBOARD_THEME = "system"
         const val DEFAULT_ZENZ_TIMEOUT_MSEC = 400
         const val DEFAULT_KEYBOARD_HEIGHT_PERCENT = 100
         const val MIN_KEYBOARD_HEIGHT_PERCENT = 70

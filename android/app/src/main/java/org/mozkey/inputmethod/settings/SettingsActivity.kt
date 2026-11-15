@@ -2,25 +2,25 @@ package org.mozkey.inputmethod.settings
 
 import android.app.Activity
 import android.content.Intent
-import android.os.Build
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.Settings
+import android.text.InputType
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsets
 import android.view.inputmethod.InputMethodManager
-import android.widget.Button
-import android.widget.CompoundButton
+import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.SeekBar
-import android.widget.Switch
 import android.widget.TextView
 import org.mozkey.inputmethod.R
 import org.mozkey.inputmethod.dictionary.UserDictionaryActivity
 import org.mozkey.inputmethod.engine.Diagnostics
 import org.mozkey.inputmethod.engine.MozcEngine
+import org.mozkey.inputmethod.keyboard.Theme
 import org.mozkey.inputmethod.zenz.ZenzManager
 import java.io.IOException
 
@@ -31,88 +31,199 @@ import java.io.IOException
 class SettingsActivity : Activity() {
 
     private lateinit var prefs: Prefs
+    private lateinit var ui: Ui
+    private var enableRow: View? = null
+    private var selectRow: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
+        ui = Ui(this)
+        val content = ui.createPage(this)
 
-        val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(20f)
-            setPadding(pad, pad, pad, pad)
-        }
-        val scroll = ScrollView(this).apply {
-            isFillViewport = true
-            addView(content, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
+        content.addView(ui.header(getString(R.string.app_name), getString(R.string.settings_tagline)))
 
-        // Activities are edge to edge on Android 15+ and can no longer opt out
-        // when targeting API 36+, so keep the content clear of the system bars.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            scroll.setOnApplyWindowInsetsListener { view, insets ->
-                val bars = insets.getInsets(
-                    WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
-                )
-                view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
-                insets
-            }
-        }
-
-        content.addView(heading(getString(R.string.settings_setup)))
-        content.addView(button(getString(R.string.settings_enable)) {
+        // ---- セットアップ
+        content.addView(ui.sectionTitle(getString(R.string.settings_setup)))
+        val enable = ui.actionRow(getString(R.string.settings_enable), "") {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
-        })
-        content.addView(button(getString(R.string.settings_select)) {
-            getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
-        })
-
-        content.addView(heading(getString(R.string.settings_input)))
-        content.addView(
-            toggle(getString(R.string.settings_qwerty), prefs.kanaLayout == Prefs.KanaLayout.QWERTY) { checked ->
-                prefs.kanaLayout = if (checked) Prefs.KanaLayout.QWERTY else Prefs.KanaLayout.FLICK
-            }
-        )
-        content.addView(toggle(getString(R.string.settings_live_conversion), prefs.liveConversion) {
-            prefs.liveConversion = it
-        })
-        content.addView(toggle(getString(R.string.settings_zenz), prefs.zenz) { prefs.zenz = it })
-        content.addView(note(getString(R.string.settings_zenz_note)))
-        content.addView(toggle(getString(R.string.settings_incognito), prefs.incognito) { prefs.incognito = it })
-        content.addView(toggle(getString(R.string.settings_haptic), prefs.haptic) { prefs.haptic = it })
-
-        content.addView(heading(getString(R.string.settings_dictionary)))
-        content.addView(button(getString(R.string.settings_dictionary_open)) {
-            startActivity(Intent(this, UserDictionaryActivity::class.java))
-        })
-
-        content.addView(heading(getString(R.string.settings_appearance)))
-        addKeyboardHeightSlider(content)
-        content.addView(toggle(getString(R.string.settings_flick_preview), prefs.flickPreview) {
-            prefs.flickPreview = it
-        })
-
-        content.addView(heading(getString(R.string.settings_status)))
-        content.addView(note(statusText()))
-
-        content.addView(heading(getString(R.string.settings_diagnostics)))
-        val diagnostics = TextView(this).apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            typeface = android.graphics.Typeface.MONOSPACE
-            setTextIsSelectable(true)
-            text = diagnosticsText()
         }
-        content.addView(button(getString(R.string.settings_diagnostics_refresh)) {
-            diagnostics.text = diagnosticsText()
-        })
-        content.addView(diagnostics)
-        content.addView(note(getString(R.string.settings_diagnostics_note)))
+        val select = ui.actionRow(getString(R.string.settings_select), "") {
+            getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
+        }
+        enableRow = enable
+        selectRow = select
+        content.addView(ui.card(enable, select))
 
-        setContentView(scroll)
+        // ---- 試し打ち
+        content.addView(ui.sectionTitle(getString(R.string.settings_try)))
+        content.addView(ui.card(ui.block(tryField())))
+
+        // ---- 入力
+        content.addView(ui.sectionTitle(getString(R.string.settings_input)))
+        content.addView(
+            ui.card(
+                ui.toggleRow(
+                    getString(R.string.settings_qwerty), getString(R.string.settings_qwerty_note),
+                    prefs.kanaLayout == Prefs.KanaLayout.QWERTY,
+                ) { checked ->
+                    prefs.kanaLayout = if (checked) Prefs.KanaLayout.QWERTY else Prefs.KanaLayout.FLICK
+                },
+                ui.toggleRow(
+                    getString(R.string.settings_live_conversion), getString(R.string.settings_live_conversion_note),
+                    prefs.liveConversion,
+                ) { prefs.liveConversion = it },
+                ui.toggleRow(
+                    getString(R.string.settings_zenz), getString(R.string.settings_zenz_note), prefs.zenz,
+                ) { prefs.zenz = it },
+                ui.toggleRow(
+                    getString(R.string.settings_incognito), getString(R.string.settings_incognito_note),
+                    prefs.incognito,
+                ) { prefs.incognito = it },
+                ui.toggleRow(getString(R.string.settings_haptic), null, prefs.haptic) { prefs.haptic = it },
+            )
+        )
+
+        // ---- キーボードの見た目
+        content.addView(ui.sectionTitle(getString(R.string.settings_appearance)))
+        content.addView(
+            ui.card(
+                ui.block(ui.label(getString(R.string.settings_theme)), themeGrid()),
+                ui.toggleRow(
+                    getString(R.string.settings_key_borders), getString(R.string.settings_key_borders_note),
+                    prefs.keyBorders,
+                ) { prefs.keyBorders = it },
+                heightBlock(),
+                ui.toggleRow(
+                    getString(R.string.settings_flick_preview), null, prefs.flickPreview,
+                ) { prefs.flickPreview = it },
+            )
+        )
+
+        // ---- 辞書
+        content.addView(ui.sectionTitle(getString(R.string.settings_dictionary)))
+        content.addView(
+            ui.card(
+                ui.actionRow(getString(R.string.settings_dictionary_open), getString(R.string.settings_dictionary_note)) {
+                    startActivity(Intent(this, UserDictionaryActivity::class.java))
+                }
+            )
+        )
+
+        // ---- 情報
+        content.addView(ui.sectionTitle(getString(R.string.settings_status)))
+        content.addView(ui.card(ui.block(ui.label(statusText(), 14f, ui.secondary))))
+
+        content.addView(ui.sectionTitle(getString(R.string.settings_diagnostics)))
+        val diagnostics = ui.label(diagnosticsText(), 12.5f, ui.secondary).apply {
+            typeface = Typeface.MONOSPACE
+            setTextIsSelectable(true)
+            setPadding(0, ui.dp(12f), 0, ui.dp(8f))
+        }
+        content.addView(
+            ui.card(
+                ui.block(
+                    ui.secondaryButton(getString(R.string.settings_diagnostics_refresh)) {
+                        diagnostics.text = diagnosticsText()
+                    },
+                    diagnostics,
+                    ui.label(getString(R.string.settings_diagnostics_note), 12.5f, ui.secondary),
+                )
+            )
+        )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshSetupStatus()
+    }
+
+    /** The picker is a system window, so returning from it shows up as a focus change. */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) refreshSetupStatus()
+    }
+
+    private fun refreshSetupStatus() {
+        val manager = getSystemService(InputMethodManager::class.java)
+        val enabled = manager?.enabledInputMethodList?.any { it.packageName == packageName } == true
+        val selected = try {
+            Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+                ?.startsWith("$packageName/") == true
+        } catch (e: SecurityException) {
+            false
+        }
+        enableRow?.let {
+            ui.setSubtitle(it, getString(if (enabled) R.string.setup_enabled else R.string.setup_not_enabled), enabled)
+        }
+        selectRow?.let {
+            ui.setSubtitle(it, getString(if (selected) R.string.setup_selected else R.string.setup_not_selected), selected)
+        }
+    }
+
+    /** Text field for trying the keyboard without leaving the settings. */
+    private fun tryField(): View = EditText(this).apply {
+        hint = getString(R.string.settings_try_hint)
+        setTextColor(ui.text)
+        setHintTextColor(ui.secondary)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        minLines = 2
+        gravity = Gravity.TOP or Gravity.START
+        background = GradientDrawable().apply {
+            setColor(ui.page)
+            cornerRadius = ui.dp(12f).toFloat()
+        }
+        setPadding(ui.dp(14f), ui.dp(12f), ui.dp(14f), ui.dp(12f))
+    }
+
+    /** Grid of theme miniatures; tapping one applies it to the keyboard at once. */
+    private fun themeGrid(): View {
+        val choices = Theme.choices()
+        val swatches = ArrayList<Pair<String, ThemeSwatchView>>()
+        val grid = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, ui.dp(10f), 0, 0)
+        }
+        for (rowChoices in choices.chunked(THEME_COLUMNS)) {
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            for (choice in rowChoices) {
+                val swatch = ThemeSwatchView(this, Theme.build(this, choice.id, keyBorders = true), ui.accent)
+                swatch.selectedSwatch = choice.id == prefs.keyboardTheme
+                swatches.add(choice.id to swatch)
+                val label = getString(choice.labelRes)
+                val cell = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    setPadding(0, ui.dp(6f), 0, ui.dp(6f))
+                    isClickable = true
+                    isFocusable = true
+                    contentDescription = label
+                    addView(swatch)
+                    addView(ui.label(label, 11.5f, ui.secondary).apply {
+                        gravity = Gravity.CENTER
+                        maxLines = 1
+                        setPadding(0, ui.dp(4f), 0, 0)
+                    })
+                    setOnClickListener {
+                        prefs.keyboardTheme = choice.id
+                        swatches.forEach { (id, view) -> view.selectedSwatch = id == choice.id }
+                    }
+                }
+                row.addView(cell, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            }
+            // Keep the last row aligned with the columns above it.
+            repeat(THEME_COLUMNS - rowChoices.size) {
+                row.addView(View(this), LinearLayout.LayoutParams(0, 0, 1f))
+            }
+            grid.addView(row)
+        }
+        return grid
     }
 
     /** Slider for the keyboard height, in steps of 5 % of the default. */
-    private fun addKeyboardHeightSlider(content: LinearLayout) {
-        val label = TextView(this).apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f) }
+    private fun heightBlock(): View {
+        val label = ui.label("")
         fun show(percent: Int) {
             label.text = getString(R.string.settings_keyboard_height, percent)
         }
@@ -120,7 +231,8 @@ class SettingsActivity : Activity() {
         val slider = SeekBar(this).apply {
             max = steps
             progress = (prefs.keyboardHeightPercent - Prefs.MIN_KEYBOARD_HEIGHT_PERCENT) / HEIGHT_STEP
-            minimumHeight = dp(48f)
+            minimumHeight = ui.dp(48f)
+            ui.tint(this)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                     val percent = Prefs.MIN_KEYBOARD_HEIGHT_PERCENT + progress * HEIGHT_STEP
@@ -135,24 +247,16 @@ class SettingsActivity : Activity() {
             })
         }
         show(prefs.keyboardHeightPercent)
-        content.addView(label)
-        content.addView(slider)
-        content.addView(button(getString(R.string.settings_keyboard_height_reset)) {
+        val reset = ui.secondaryButton(getString(R.string.settings_keyboard_height_reset)) {
             prefs.keyboardHeightPercent = Prefs.DEFAULT_KEYBOARD_HEIGHT_PERCENT
             slider.progress =
                 (Prefs.DEFAULT_KEYBOARD_HEIGHT_PERCENT - Prefs.MIN_KEYBOARD_HEIGHT_PERCENT) / HEIGHT_STEP
-        })
-        content.addView(note(getString(R.string.settings_keyboard_height_note)))
-    }
-
-    private fun statusText(): String {
-        val dictionary = hasAsset(MozcEngine.DATA_ASSET)
-        val model = hasAsset(ZenzManager.MODEL_ASSET)
-        return buildString {
-            append(getString(if (dictionary) R.string.status_dictionary_ok else R.string.status_dictionary_missing))
-            append('\n')
-            append(getString(if (model) R.string.status_model_ok else R.string.status_model_missing))
         }
+        val resetRow = LinearLayout(this).apply {
+            gravity = Gravity.END
+            addView(reset)
+        }
+        return ui.block(label, slider, resetRow)
     }
 
     /** Numbers and flags only; never any typed text. */
@@ -176,6 +280,16 @@ class SettingsActivity : Activity() {
         }
     }
 
+    private fun statusText(): String {
+        val dictionary = hasAsset(MozcEngine.DATA_ASSET)
+        val model = hasAsset(ZenzManager.MODEL_ASSET)
+        return buildString {
+            append(getString(if (dictionary) R.string.status_dictionary_ok else R.string.status_dictionary_missing))
+            append('\n')
+            append(getString(if (model) R.string.status_model_ok else R.string.status_model_missing))
+        }
+    }
+
     private fun hasAsset(path: String): Boolean = try {
         assets.open(path).close()
         true
@@ -183,39 +297,8 @@ class SettingsActivity : Activity() {
         false
     }
 
-    private fun dp(value: Float): Int =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
-
-    private fun heading(text: String): View = TextView(this).apply {
-        this.text = text
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        setTypeface(typeface, android.graphics.Typeface.BOLD)
-        setPadding(0, dp(24f), 0, dp(8f))
-    }
-
-    private fun note(text: String): View = TextView(this).apply {
-        this.text = text
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-        alpha = 0.75f
-        setPadding(0, dp(2f), 0, dp(8f))
-    }
-
-    private fun button(text: String, onClick: () -> Unit): View = Button(this).apply {
-        this.text = text
-        isAllCaps = false
-        setOnClickListener { onClick() }
-    }
-
     private companion object {
         const val HEIGHT_STEP = 5
+        const val THEME_COLUMNS = 4
     }
-
-    private fun toggle(text: String, checked: Boolean, onChange: (Boolean) -> Unit): View =
-        Switch(this).apply {
-            this.text = text
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            isChecked = checked
-            minHeight = dp(52f)
-            setOnCheckedChangeListener { _: CompoundButton, value: Boolean -> onChange(value) }
-        }
 }

@@ -4,22 +4,35 @@
     <string name="ime_name">Mozkey 日本語入力</string>
     <string name="subtype_japanese">日本語</string>
 
+    <string name="settings_tagline">日本語入力 · ライブ変換と Zenz 補正</string>
     <string name="settings_setup">セットアップ</string>
-    <string name="settings_enable">1. キーボードを有効にする</string>
-    <string name="settings_select">2. Mozkey に切り替える</string>
+    <string name="settings_enable">キーボードを有効にする</string>
+    <string name="settings_select">Mozkey に切り替える</string>
+    <string name="setup_enabled">有効になっています</string>
+    <string name="setup_not_enabled">システム設定で Mozkey をオンにしてください</string>
+    <string name="setup_selected">現在のキーボードです</string>
+    <string name="setup_not_selected">タップしてキーボードを選びます</string>
+
+    <string name="settings_try">試し打ち</string>
+    <string name="settings_try_hint">ここをタップして入力を試せます</string>
 
     <string name="settings_input">入力</string>
-    <string name="settings_qwerty">かな入力に QWERTY(ローマ字)を使う</string>
+    <string name="settings_qwerty">QWERTY(ローマ字)でかな入力</string>
+    <string name="settings_qwerty_note">オフのときは 12 キーのフリック入力です</string>
     <string name="settings_live_conversion">ライブ変換</string>
+    <string name="settings_live_conversion_note">打った文字を自動で漢字に変換します</string>
     <string name="settings_zenz">Zenz による文脈補正</string>
-    <string name="settings_zenz_note">Zenz は端末内で動作します。ライブ変換がオンのときだけ働きます。</string>
-    <string name="settings_incognito">シークレットモード(学習しない)</string>
+    <string name="settings_zenz_note">端末内の AI が前後の文脈から変換を直します。ライブ変換がオンのときだけ働きます</string>
+    <string name="settings_incognito">シークレットモード</string>
+    <string name="settings_incognito_note">変換結果を学習しません</string>
     <string name="settings_haptic">キー入力時に振動する</string>
 
     <string name="settings_dictionary">辞書</string>
-    <string name="settings_dictionary_open">単語を辞書に登録する</string>
+    <string name="settings_dictionary_open">ユーザー辞書</string>
+    <string name="settings_dictionary_note">単語の登録・編集・削除</string>
 
     <string name="dictionary_title">ユーザー辞書</string>
+    <string name="dictionary_subtitle">登録した単語は変換候補に出るようになります</string>
     <string name="dictionary_add">単語を追加</string>
     <string name="dictionary_edit">単語を編集</string>
     <string name="dictionary_empty">登録した単語はまだありません。</string>
@@ -35,10 +48,23 @@
     <string name="dictionary_error_word_invalid">単語に改行やタブは使えません。</string>
     <string name="dictionary_error_too_long">よみ・単語が長すぎます。</string>
 
-    <string name="settings_appearance">表示</string>
+    <string name="settings_appearance">キーボードの見た目</string>
+    <string name="settings_theme">配色</string>
+    <string name="settings_key_borders">キーの枠を表示する</string>
+    <string name="settings_key_borders_note">オフにすると、枠のない平らなキーボードになります</string>
+    <string name="theme_system">自動</string>
+    <string name="theme_dynamic">壁紙の色</string>
+    <string name="theme_light">ライト</string>
+    <string name="theme_dark">ダーク</string>
+    <string name="theme_black">ブラック</string>
+    <string name="theme_blue">ブルー</string>
+    <string name="theme_green">グリーン</string>
+    <string name="theme_rose">ローズ</string>
+    <string name="theme_purple">パープル</string>
+    <string name="theme_sand">サンド</string>
+    <string name="theme_navy">ネイビー</string>
     <string name="settings_keyboard_height">キーボードの高さ: %1$d%%</string>
-    <string name="settings_keyboard_height_reset">高さを標準(100%)に戻す</string>
-    <string name="settings_keyboard_height_note">キーの縦の大きさを変えます。キーボードを開いたまま動かすと、その場で反映されます。</string>
+    <string name="settings_keyboard_height_reset">標準に戻す</string>
 
     <string name="settings_flick_preview">フリック中に上下左右の文字を表示する</string>
 

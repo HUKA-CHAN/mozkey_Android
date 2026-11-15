@@ -214,21 +214,26 @@ class KeyboardView(context: Context) : View(context) {
             // With the flick guide the pressed key stands for "no flick" and is
             // highlighted only while the center is selected.
             val centerSelected = pressed && key.hasFlicks && (!guide || touch.direction == -1)
+            // The enter key is the one accent-colored key, as on most keyboards.
+            val isEnter = (key.action as? KeyAction.Function)?.key == FunctionKey.ENTER
+            val accented = centerSelected || shiftOn || (isEnter && !pressed)
             keyPaint.color = when {
-                centerSelected -> theme.accent
+                accented -> theme.accent
                 pressed -> theme.pressedKey
-                shiftOn -> theme.accent
                 key.functional -> theme.functionalKey
                 else -> theme.key
             }
-            canvas.drawRoundRect(rect, corner, corner, keyPaint)
+            // Borderless themes draw a key shape only where it carries meaning.
+            if (theme.keyBorders || accented || pressed) {
+                canvas.drawRoundRect(rect, corner, corner, keyPaint)
+            }
 
             var label = displayLabel(key)
             if (pressed && !guide && touch.direction >= 0) {
                 key.flicks.getOrNull(touch.direction)?.let { label = it.label }
             }
 
-            labelPaint.color = if (centerSelected || shiftOn) theme.onAccent else theme.text
+            labelPaint.color = if (accented) theme.onAccent else theme.text
             val base = rect.height() * if (key.functional || label.length > 1) 0.30f else 0.42f
             labelPaint.textSize = base
             // Long labels ("space", "小゛゜") must not overflow the key.
