@@ -199,6 +199,7 @@ mozc_cc_library(
     srcs = [
         "session.cc",
         "zenz_client_factory.cc",
+        "zenz_inprocess_client.cc",
         "zenz_live_corrector.cc",
         "zenz_named_pipe_client.cc",
         "zenz_unix_socket_client.cc",
@@ -206,6 +207,7 @@ mozc_cc_library(
     hdrs = [
         "session.h",
         "zenz_client_factory.h",
+        "zenz_inprocess_client.h",
         "zenz_live_corrector.h",
         "zenz_named_pipe_client.h",
         "zenz_unix_socket_client.h",
@@ -238,6 +240,7 @@ mozc_cc_library(
         "//protocol:commands_cc_proto",
         "//protocol:config_cc_proto",
         "//transliteration",
+        "//zenz:inprocess_abi",
         "//zenz:unix_socket_path",
         "//zenz:wire_protocol",
         "@com_google_absl//absl/log",
@@ -265,6 +268,17 @@ mozc_cc_test(
             "//base:process",
         ],
     ),
+)
+
+mozc_cc_test(
+    name = "zenz_inprocess_client_test",
+    size = "small",
+    srcs = ["zenz_inprocess_client_test.cc"],
+    deps = [
+        ":session",
+        "//testing:gunit_main",
+        "//zenz:inprocess_abi",
+    ],
 )
 
 mozc_cc_test(

@@ -1,0 +1,120 @@
+name: Android APK (Mozkey IME)
+# Builds the installable Android IME: libmozc.so (Bazel) + libmozkey_zenz.so
+# (llama.cpp, CMake) + the Kotlin app (Gradle). See docs/build_mozkey_for_android.md.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "android/**"
+      # Host-side tests are not part of the APK.
+      - "!android/tools/**"
+      - "src/android/**"
+      - "src/session/zenz_client_factory.*"
+      - "src/session/zenz_inprocess_client*"
+      - "src/zenz/zenz_inprocess_abi.h"
+      - "src/zenz_runtime/llama_runtime.lock.json"
+      - ".github/workflows/android-apk.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+          persist-credentials: false
+
+      - name: Try to restore update_deps cache
+        uses: actions/cache@v5
+        with:
+          path: src/third_party_cache
+          key: update_deps-${{ runner.os }}-${{ hashFiles('src/build_tools/update_deps.py') }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # Android Gradle plugin 9.3 (API level 37) requires Gradle 9.5.0 or newer.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      # Mozkey's dictionary needs generated inputs that are not checked in
+      # (same step as the Linux / macOS / Windows workflows).
+      - name: Prepare daily dictionary
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: "utf-8"
+        run: |
+          $ErrorActionPreference = "Stop"
+          ./tools/dictionary/prepare_daily_dictionary.ps1
+
+      - name: Build native libraries, dictionary, protobuf classes and bundle the model
+        run: android/scripts/prepare_native.sh
+
+      - name: Build APK
+        run: gradle -p android --no-daemon :app:assembleRelease
+
+      - name: upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: mozkey-android-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+  # Publishes the APK as a GitHub Release so it stays available after the
+  # workflow artifact expires. Kept in its own job so that the build itself
+  # runs with a read-only token.
+  release:
+    needs: apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: download artifacts
+        uses: actions/download-artifact@v6
+        with:
+          name: mozkey-android-apk
+          path: apk
+
+      - name: create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: android-build-${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          apk="mozkey-android-build-${{ github.run_number }}.apk"
+          mv apk/*.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          {
+            echo "Mozkey for Android (Android 17 / targetSdk 37)."
+            echo
+            echo "- Commit: ${GITHUB_SHA}"
+            echo "- Signed with a per-build debug key: uninstall the previous build before installing this one."
+          } > notes.md
+          gh release create "$TAG" "$apk" "$apk.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Mozkey for Android build ${{ github.run_number }}" \
+            --notes-file notes.md

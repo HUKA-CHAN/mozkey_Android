@@ -1,0 +1,11 @@
+.gradle/
+build/
+app/build/
+app/.cxx/
+local.properties
+
+# Produced by scripts/prepare_native.sh
+third_party/
+app/src/main/jniLibs/
+app/src/main/assets/
+app/src/main/java/org/mozc/

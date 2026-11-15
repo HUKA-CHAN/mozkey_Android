@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mozkey</string>
+    <string name="ime_name">Mozkey 日本語入力</string>
+    <string name="subtype_japanese">日本語</string>
+
+    <string name="settings_tagline">日本語入力 · ライブ変換と Zenz 補正</string>
+    <string name="settings_setup">セットアップ</string>
+    <string name="settings_enable">キーボードを有効にする</string>
+    <string name="settings_select">Mozkey に切り替える</string>
+    <string name="setup_enabled">有効になっています</string>
+    <string name="setup_not_enabled">システム設定で Mozkey をオンにしてください</string>
+    <string name="setup_selected">現在のキーボードです</string>
+    <string name="setup_not_selected">タップしてキーボードを選びます</string>
+
+    <string name="settings_try">試し打ち</string>
+    <string name="settings_try_hint">ここをタップして入力を試せます</string>
+
+    <string name="settings_input">入力</string>
+    <string name="settings_qwerty">QWERTY(ローマ字)でかな入力</string>
+    <string name="settings_qwerty_note">オフのときは 12 キーのフリック入力です</string>
+    <string name="settings_live_conversion">ライブ変換</string>
+    <string name="settings_live_conversion_note">打った文字を自動で漢字に変換します</string>
+    <string name="settings_zenz">Zenz による文脈補正</string>
+    <string name="settings_zenz_note">端末内の AI が前後の文脈から変換を直します。ライブ変換がオンのときだけ働きます</string>
+    <string name="settings_incognito">シークレットモード</string>
+    <string name="settings_incognito_note">変換結果を学習しません</string>
+    <string name="settings_haptic">キー入力時に振動する</string>
+
+    <string name="settings_dictionary">辞書</string>
+    <string name="settings_dictionary_open">ユーザー辞書</string>
+    <string name="settings_dictionary_note">単語の登録・編集・削除</string>
+
+    <string name="dictionary_title">ユーザー辞書</string>
+    <string name="dictionary_subtitle">登録した単語は変換候補に出るようになります</string>
+    <string name="dictionary_add">単語を追加</string>
+    <string name="dictionary_edit">単語を編集</string>
+    <string name="dictionary_empty">登録した単語はまだありません。</string>
+    <string name="dictionary_reading_hint">よみ(ひらがな)</string>
+    <string name="dictionary_word_hint">単語</string>
+    <string name="dictionary_save">保存</string>
+    <string name="dictionary_delete">削除</string>
+    <string name="dictionary_load_failed">ユーザー辞書を読み込めませんでした。</string>
+    <string name="dictionary_save_failed">ユーザー辞書を保存できませんでした。</string>
+    <string name="dictionary_error_reading_empty">よみを入力してください。</string>
+    <string name="dictionary_error_reading_invalid">よみに使えるのは、ひらがな・カタカナ・半角英数字と一部の記号です。</string>
+    <string name="dictionary_error_word_empty">単語を入力してください。</string>
+    <string name="dictionary_error_word_invalid">単語に改行やタブは使えません。</string>
+    <string name="dictionary_error_too_long">よみ・単語が長すぎます。</string>
+
+    <string name="settings_appearance">キーボードの見た目</string>
+    <string name="settings_theme">配色</string>
+    <string name="settings_key_borders">キーの枠を表示する</string>
+    <string name="settings_key_borders_note">オフにすると、枠のない平らなキーボードになります</string>
+    <string name="theme_system">自動</string>
+    <string name="theme_dynamic">壁紙の色</string>
+    <string name="theme_light">ライト</string>
+    <string name="theme_dark">ダーク</string>
+    <string name="theme_black">ブラック</string>
+    <string name="theme_blue">ブルー</string>
+    <string name="theme_green">グリーン</string>
+    <string name="theme_rose">ローズ</string>
+    <string name="theme_purple">パープル</string>
+    <string name="theme_sand">サンド</string>
+    <string name="theme_navy">ネイビー</string>
+    <string name="settings_keyboard_height">キーボードの高さ: %1$d%%</string>
+    <string name="settings_keyboard_height_reset">標準に戻す</string>
+
+    <string name="settings_flick_preview">フリック中に上下左右の文字を表示する</string>
+
+    <string name="settings_diagnostics">診断</string>
+    <string name="settings_diagnostics_refresh">診断情報を更新</string>
+    <string name="settings_diagnostics_note">変換処理がどこまで進んだかを示す件数です。入力した文字は含みません。長押しでコピーできます。</string>
+
+    <string name="settings_status">同梱データ</string>
+    <string name="status_dictionary_ok">変換辞書: 同梱されています</string>
+    <string name="status_dictionary_missing">変換辞書: 見つかりません(prepare_native.sh を実行してビルドし直してください)</string>
+    <string name="status_model_ok">Zenz モデル: 同梱されています</string>
+    <string name="status_model_missing">Zenz モデル: 同梱されていません(Zenz 補正は無効になります)</string>
+</resources>
