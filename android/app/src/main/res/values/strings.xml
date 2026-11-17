@@ -25,6 +25,8 @@
     <string name="settings_zenz_note">端末内の AI が前後の文脈から変換を直します。ライブ変換がオンのときだけ働きます</string>
     <string name="settings_incognito">シークレットモード</string>
     <string name="settings_incognito_note">変換結果を学習しません</string>
+    <string name="settings_phrase_history">フレーズ履歴</string>
+    <string name="settings_phrase_history_note">以前に確定した文を、よみの先頭一致で候補に出します</string>
     <string name="settings_haptic">キー入力時に振動する</string>
 
     <string name="settings_dictionary">辞書</string>
