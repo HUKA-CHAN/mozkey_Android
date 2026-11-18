@@ -4182,6 +4182,23 @@ bool Session::MaybeCommitPhraseHistoryCandidate(
   return true;
 }
 
+bool Session::MaybeCommitTopPhraseHistoryCandidate(
+    commands::Command* command) {
+  const auto it =
+      phrase_history_candidates_.find(PhraseHistoryStore::kCandidateIdBase);
+  if (it == phrase_history_candidates_.end()) {
+    return false;
+  }
+  const std::string reading = it->second.first;
+  const std::string value = it->second.second;
+  phrase_history_candidates_.clear();
+  // Same direct commit as a mouse click on the candidate; the resulting
+  // output carries result.key == reading, so the post-processing in
+  // MaybeApplyPhraseHistory() counts this use, too.
+  CommitStringDirectly(reading, value, command);
+  return true;
+}
+
 bool Session::IsPhraseHistoryCandidateId(const int32_t id) const {
   return id <= PhraseHistoryStore::kCandidateIdBase &&
          id > PhraseHistoryStore::kCandidateIdBase -
@@ -10935,6 +10952,19 @@ bool Session::PredictAndConvertFromLiveConversion(commands::Command* command) {
 }
 
 bool Session::PredictAndConvert(commands::Command* command) {
+#ifdef _WIN32
+  // Phrase-history candidates head the displayed suggestion window, but
+  // they exist only in the output: the converter's suggestion list that
+  // FocusDisplayedPassiveSuggestion() and Predict() resolve against
+  // never contains them, so the Down key would convert to the
+  // converter's top candidate instead of the phrase shown first. When
+  // phrases are displayed, Down (PredictAndConvert) commits the top
+  // phrase, matching its position at the head of the window.
+  if (context_->state() == ImeContext::COMPOSITION &&
+      MaybeCommitTopPhraseHistoryCandidate(command)) {
+    return true;
+  }
+#endif  // _WIN32
   if (FocusDisplayedPassiveSuggestion(command)) {
     return true;
   }

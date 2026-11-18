@@ -700,6 +700,11 @@ class Session {
   // converter, whose candidate ids never collide with the reserved
   // negative phrase-history range.
   bool MaybeCommitPhraseHistoryCandidate(mozc::commands::Command* command);
+  // Commits the topmost displayed phrase-history candidate and returns
+  // true, or returns false when no phrase is displayed. Used by
+  // PredictAndConvert(): the Down key resolves against the converter's
+  // suggestion list, which never contains the injected phrases.
+  bool MaybeCommitTopPhraseHistoryCandidate(mozc::commands::Command* command);
   bool IsPhraseHistoryCandidateId(int32_t id) const;
 #endif  // _WIN32
 
