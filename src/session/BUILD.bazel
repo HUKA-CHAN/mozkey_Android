@@ -195,6 +195,12 @@ mozc_cc_library(
 )
 
 mozc_cc_library(
+    name = "phrase_history",
+    srcs = ["phrase_history.cc"],
+    hdrs = ["phrase_history.h"],
+)
+
+mozc_cc_library(
     name = "session",
     srcs = [
         "session.cc",
@@ -219,6 +225,7 @@ mozc_cc_library(
         ":ime_context",
         ":key_event_transformer",
         ":keymap",
+        ":phrase_history",
         ":vertical_writing_key_transform",
         ":zenz_adoption_policy",
         ":zenz_client_context",
@@ -253,7 +260,21 @@ mozc_cc_library(
             "//base:process",
             "//base:system_util",
         ],
+        windows = [
+            "//base:file_util",
+            "//base:system_util",
+        ],
     ),
+)
+
+mozc_cc_test(
+    name = "phrase_history_test",
+    size = "small",
+    srcs = ["phrase_history_test.cc"],
+    deps = [
+        ":phrase_history",
+        "//testing:gunit_main",
+    ],
 )
 
 mozc_cc_test(

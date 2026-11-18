@@ -60,6 +60,7 @@
 #include "session/ime_context.h"
 #include "session/key_event_transformer.h"
 #include "session/keymap.h"
+#include "session/phrase_history.h"
 #include "session/vertical_writing_key_transform.h"
 #include "session/zenz_client_context.h"
 #include "session/zenz_client_factory.h"
@@ -74,6 +75,9 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+
+#include "base/file_util.h"
+#include "base/system_util.h"
 #endif
 
 namespace mozc {
@@ -2143,6 +2147,9 @@ bool Session::SendCommand(commands::Command* command) {
         LOG(ERROR) << "Unknown mode: " << session_command.composition_mode();
         break;
     }
+#ifdef _WIN32
+    MaybeApplyPhraseHistory(command);
+#endif  // _WIN32
     MaybeSetUndoStatus(command);
     return result;
   }
@@ -2259,6 +2266,9 @@ bool Session::SendCommand(commands::Command* command) {
     ClearZenzLiveCorrectionState();
   }
 
+#ifdef _WIN32
+  MaybeApplyPhraseHistory(command);
+#endif  // _WIN32
   MaybeSetUndoStatus(command);
   return result;
 }
@@ -2426,6 +2436,9 @@ bool Session::SendKey(commands::Command* command) {
     ClearZenzLiveCorrectionState();
   }
 
+#ifdef _WIN32
+  MaybeApplyPhraseHistory(command);
+#endif  // _WIN32
   MaybeSetUndoStatus(command);
   return result;
 }
@@ -4005,7 +4018,183 @@ bool Session::SelectCandidateInternal(commands::Command* command) {
   return true;
 }
 
+#ifdef _WIN32
+void Session::MaybeApplyPhraseHistory(commands::Command* command) {
+  if (command == nullptr) {
+    return;
+  }
+  // Never read or write history in incognito mode. The Android app layer
+  // suppresses both recording and suggestions while incognito, too.
+  if (context_->GetConfig().incognito_mode() ||
+      context_->GetRequest().is_incognito_mode()) {
+    phrase_history_candidates_.clear();
+    return;
+  }
+
+  // Point the shared store at its file next to the other Mozc user data.
+  // Done lazily here because the user profile directory is only known
+  // once the server is running.
+  static const bool store_ready = [] {
+    const std::string dir = SystemUtil::GetUserProfileDirectory();
+    if (!dir.empty()) {
+      PhraseHistoryStore::GetInstance()->SetFilePath(
+          FileUtil::JoinPath(dir, "phrase_history.tsv"));
+    }
+    return true;
+  }();
+  (void)store_ready;
+  PhraseHistoryStore* store = PhraseHistoryStore::GetInstance();
+
+  commands::Output* output = command->mutable_output();
+
+  // Record a committed result. Output.Result.key is the reading of the
+  // committed value, so a multi-segment commit is remembered as one
+  // (reading -> phrase) pair and a partial commit as its committed part,
+  // mirroring the Android implementation.
+  if (output->has_result() &&
+      output->result().type() == commands::Result::STRING &&
+      output->result().has_key()) {
+    store->Record(output->result().key(), output->result().value());
+    phrase_history_candidates_.clear();
+    // Fall through: a partial commit leaves a composition behind, and
+    // its suggestion window may still gain history phrases below.
+  }
+
+  // Suggest only while a plain suggestion window is shown: the user is
+  // still typing and no candidate is focused yet.
+  if (!output->has_preedit() || !output->has_candidate_window()) {
+    return;
+  }
+  commands::CandidateWindow* window = output->mutable_candidate_window();
+  if (!window->has_category() ||
+      window->category() != commands::SUGGESTION ||
+      window->has_focused_index()) {
+    return;
+  }
+
+  std::string reading;
+  for (const commands::Preedit::Segment& segment :
+       output->preedit().segment()) {
+    reading += segment.key();
+  }
+  if (reading.empty()) {
+    return;
+  }
+
+  const std::vector<PhraseHistoryStore::Entry> suggestions =
+      store->Suggest(reading);
+  phrase_history_candidates_.clear();
+  if (suggestions.empty()) {
+    return;
+  }
+
+  // Do not offer a phrase that the converter already lists.
+  std::vector<PhraseHistoryStore::Entry> fresh;
+  for (const PhraseHistoryStore::Entry& entry : suggestions) {
+    bool already_listed = false;
+    for (const commands::CandidateWindow::Candidate& candidate :
+         window->candidate()) {
+      if (candidate.value() == entry.value) {
+        already_listed = true;
+        break;
+      }
+    }
+    if (!already_listed) {
+      fresh.push_back(entry);
+    }
+  }
+  if (fresh.empty()) {
+    return;
+  }
+
+  // Prepend the history phrases, keeping the existing candidates in order
+  // with their indices shifted behind the injected ones.
+  std::vector<commands::CandidateWindow::Candidate> existing(
+      window->candidate().begin(), window->candidate().end());
+  window->clear_candidate();
+  uint32_t index = 0;
+  for (size_t i = 0; i < fresh.size(); ++i) {
+    commands::CandidateWindow::Candidate* candidate = window->add_candidate();
+    candidate->set_index(index++);
+    candidate->set_value(fresh[i].value);
+    const int32_t id = PhraseHistoryStore::kCandidateIdBase -
+                       static_cast<int32_t>(i);
+    candidate->set_id(id);
+    candidate->mutable_annotation()->set_description("履歴");
+    phrase_history_candidates_[id] =
+        std::make_pair(fresh[i].reading, fresh[i].value);
+  }
+  for (const commands::CandidateWindow::Candidate& candidate : existing) {
+    commands::CandidateWindow::Candidate* added = window->add_candidate();
+    *added = candidate;
+    added->set_index(index++);
+  }
+  window->set_size(window->size() + static_cast<uint32_t>(fresh.size()));
+
+  // Mirror the same phrases into all_candidate_words, which the TSF
+  // candidate-list UI element reads, so both candidate UIs agree.
+  if (output->has_all_candidate_words()) {
+    commands::CandidateList* list = output->mutable_all_candidate_words();
+    if (list->has_category() && list->category() == commands::SUGGESTION) {
+      std::vector<commands::CandidateWord> words(list->candidates().begin(),
+                                                 list->candidates().end());
+      list->clear_candidates();
+      uint32_t word_index = 0;
+      for (size_t i = 0; i < fresh.size(); ++i) {
+        commands::CandidateWord* word = list->add_candidates();
+        word->set_index(word_index++);
+        word->set_id(PhraseHistoryStore::kCandidateIdBase -
+                     static_cast<int32_t>(i));
+        word->set_key(fresh[i].reading);
+        word->set_value(fresh[i].value);
+        word->mutable_annotation()->set_description("履歴");
+      }
+      for (const commands::CandidateWord& word : words) {
+        commands::CandidateWord* added = list->add_candidates();
+        *added = word;
+        added->set_index(word_index++);
+      }
+      if (list->has_focused_index()) {
+        list->set_focused_index(list->focused_index() +
+                                static_cast<uint32_t>(fresh.size()));
+      }
+    }
+  }
+}
+
+bool Session::MaybeCommitPhraseHistoryCandidate(
+    commands::Command* command) {
+  const commands::Input& input = command->input();
+  if (!input.has_command() || !input.command().has_id()) {
+    return false;
+  }
+  const auto it = phrase_history_candidates_.find(input.command().id());
+  if (it == phrase_history_candidates_.end()) {
+    return false;
+  }
+  const std::string reading = it->second.first;
+  const std::string value = it->second.second;
+  phrase_history_candidates_.clear();
+  // Commits the phrase as the result, replacing the current composition.
+  // The resulting output carries result.key == reading, so the
+  // post-processing in MaybeApplyPhraseHistory() counts this use, too.
+  CommitStringDirectly(reading, value, command);
+  return true;
+}
+
+bool Session::IsPhraseHistoryCandidateId(const int32_t id) const {
+  return id <= PhraseHistoryStore::kCandidateIdBase &&
+         id > PhraseHistoryStore::kCandidateIdBase -
+                  PhraseHistoryStore::kMaxSuggestions;
+}
+#endif  // _WIN32
+
 bool Session::SelectCandidate(commands::Command* command) {
+#ifdef _WIN32
+  if (MaybeCommitPhraseHistoryCandidate(command)) {
+    return true;
+  }
+#endif  // _WIN32
   if (!SelectCandidateInternal(command)) {
     return DoNothing(command);
   }
@@ -4023,6 +4212,15 @@ bool Session::CommitCandidate(commands::Command* command) {
     LOG(WARNING) << "input.command or input.command.id did not exist.";
     return false;
   }
+
+#ifdef _WIN32
+  // A phrase-history candidate must be resolved before the live
+  // conversion fail-closed logic below: its id exists only in the
+  // injected output, never in a converter or a passive suggestion window.
+  if (MaybeCommitPhraseHistoryCandidate(command)) {
+    return true;
+  }
+#endif  // _WIN32
 
   // Live conversion deliberately keeps the real converter in CONVERSION while
   // rendering a passive SUGGESTION list generated from a cloned ImeContext.
@@ -4183,6 +4381,18 @@ bool Session::CommitCandidate(commands::Command* command) {
 }
 
 bool Session::HighlightCandidate(commands::Command* command) {
+#ifdef _WIN32
+  // Highlighting a phrase-history candidate is a no-op: suggestion
+  // candidates have no focused state to move, and the id must not be
+  // resolved against the converter.
+  if (command->input().has_command() &&
+      command->input().command().has_id() &&
+      (phrase_history_candidates_.find(command->input().command().id()) !=
+           phrase_history_candidates_.end() ||
+       IsPhraseHistoryCandidateId(command->input().command().id()))) {
+    return DoNothing(command);
+  }
+#endif  // _WIN32
   if (!SelectCandidateInternal(command)) {
     return false;
   }

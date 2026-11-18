@@ -35,6 +35,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -382,6 +383,15 @@ class Session {
   // suggestions; this cache keeps the passive suggestion window stable there.
   commands::CandidateWindow live_conversion_suggestion_candidate_window_;
 
+#ifdef _WIN32
+  // Phrase-history candidates currently injected into the output's
+  // candidate window: reserved candidate id -> (reading, committed value).
+  // Rebuilt whenever MaybeApplyPhraseHistory() injects candidates and
+  // cleared when a result is committed.
+  std::map<int32_t, std::pair<std::string, std::string>>
+      phrase_history_candidates_;
+#endif  // _WIN32
+
   // Exact cloned context that produced the passive suggestion window above.
   // Candidate IDs in that window belong to this converter state, not to the
   // real live-conversion converter which intentionally remains in CONVERSION.
@@ -676,6 +686,22 @@ class Session {
   // would not be used from SendKey but used from SendCommand because
   // it requires the argument id.
   bool SelectCandidate(mozc::commands::Command* command);
+
+#ifdef _WIN32
+  // Phrase history (Windows only; the Android app implements the same
+  // feature in its app layer). See session/phrase_history.h.
+  // Post-processes the output of SendKey/SendCommand: records a committed
+  // result into the phrase history and prepends matching history phrases
+  // to a SUGGESTION candidate window. Does nothing in incognito mode.
+  void MaybeApplyPhraseHistory(mozc::commands::Command* command);
+  // If input.command.id identifies a phrase-history candidate injected by
+  // MaybeApplyPhraseHistory(), commits that phrase directly and returns
+  // true. Must be consulted before the id is resolved against the
+  // converter, whose candidate ids never collide with the reserved
+  // negative phrase-history range.
+  bool MaybeCommitPhraseHistoryCandidate(mozc::commands::Command* command);
+  bool IsPhraseHistoryCandidateId(int32_t id) const;
+#endif  // _WIN32
 
   // Calls EngineConverter::ConmmitHeadToFocusedSegments()
   // and deletes characters from the composer.
