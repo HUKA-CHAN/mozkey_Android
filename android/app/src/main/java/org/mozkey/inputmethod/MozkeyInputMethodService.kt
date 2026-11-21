@@ -169,15 +169,23 @@ class MozkeyInputMethodService :
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
         )
 
-        // Since Android 15 an IME that targets API 35+ draws edge to edge, so the
+                // Since Android 15 an IME that targets API 35+ draws edge to edge, so the
         // keyboard has to keep its keys clear of the navigation bar and cutouts.
+        // Some apps hide the navigation bar, which drops the visible bottom inset
+        // to zero and leaves the bottom key row inside the system's gesture area,
+        // where its touches are swallowed. Keep the clearance the bar would take
+        // if it were shown, so the bottom row always stays clear of that area.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             root.setOnApplyWindowInsetsListener { view, insets ->
                 val bars = insets.getInsets(
                     WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
                 )
-                view.setPadding(bars.left, 0, bars.right, bars.bottom)
-                keyboard.overflowBottom = bars.bottom.toFloat()
+                val navBottom = insets.getInsetsIgnoringVisibility(
+                    WindowInsets.Type.navigationBars()
+                ).bottom
+                val bottom = maxOf(bars.bottom, navBottom)
+                view.setPadding(bars.left, 0, bars.right, bottom)
+                keyboard.overflowBottom = bottom.toFloat()
                 insets
             }
         }
