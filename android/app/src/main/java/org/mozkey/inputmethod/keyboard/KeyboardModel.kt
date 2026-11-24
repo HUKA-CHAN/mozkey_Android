@@ -47,12 +47,12 @@ enum class KeyboardMode { KANA_FLICK, KANA_QWERTY, ALPHABET, SYMBOL_1, SYMBOL_2 
 
 object KeyboardLayouts {
 
-    fun forMode(mode: KeyboardMode): KeyboardLayout = when (mode) {
-        KeyboardMode.KANA_FLICK -> kanaFlick
-        KeyboardMode.KANA_QWERTY -> kanaQwerty
+    fun forMode(mode: KeyboardMode, showSwitchKey: Boolean = true): KeyboardLayout = when (mode) {
+        KeyboardMode.KANA_FLICK -> kanaFlick(showSwitchKey)
+        KeyboardMode.KANA_QWERTY -> kanaQwerty(showSwitchKey)
         KeyboardMode.ALPHABET -> alphabet
-        KeyboardMode.SYMBOL_1 -> symbols1
-        KeyboardMode.SYMBOL_2 -> symbols2
+        KeyboardMode.SYMBOL_1 -> symbols1(showSwitchKey)
+        KeyboardMode.SYMBOL_2 -> symbols2(showSwitchKey)
     }
 
     private fun fn(label: String, key: FunctionKey, weight: Float = 1f, repeatable: Boolean = false) =
@@ -87,11 +87,11 @@ object KeyboardLayouts {
     const val LABEL_SHIFT = "⇧"
 
     // ---- かな (12 キー・フリック) ---------------------------------------------
-    private val kanaFlick = KeyboardLayout(
+    private fun kanaFlick(showSwitchKey: Boolean) = KeyboardLayout(
         rowHeightDp = 54f,
         rows = listOf(
-            listOf(
-                fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME),
+            listOfNotNull(
+                if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
                 flick("あいうえお", "1_;:@"),
                 flick("かきくけこ", "2abc|"),
                 flick("さしすせそ", "3def~"),
@@ -122,7 +122,7 @@ object KeyboardLayouts {
     )
 
     // ---- かな (QWERTY ローマ字) -----------------------------------------------
-    private val kanaQwerty = KeyboardLayout(
+    private fun kanaQwerty(showSwitchKey: Boolean) = KeyboardLayout(
         rowHeightDp = 48f,
         rows = listOf(
             "qwertyuiop".map { mozc(it.toString(), it) },
@@ -130,9 +130,9 @@ object KeyboardLayouts {
             listOf(fn("ABC", FunctionKey.MODE_ALPHABET, weight = 1.5f)) +
                 "zxcvbnm".map { mozc(it.toString(), it) } +
                 fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, weight = 1.5f, repeatable = true),
-            listOf(
+            listOfNotNull(
                 fn("記号", FunctionKey.MODE_SYMBOL, weight = 1.3f),
-                fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME),
+                if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
                 mozc("、", ','),
                 fn(LABEL_SPACE, FunctionKey.SPACE, weight = 2.7f),
                 mozc("。", '.'),
@@ -164,17 +164,17 @@ object KeyboardLayouts {
     )
 
     // ---- 数字・記号 (直接入力) --------------------------------------------------
-    private fun symbolBottomRow() = listOf(
+    private fun symbolBottomRow(showSwitchKey: Boolean) = listOfNotNull(
         fn("あ", FunctionKey.MODE_KANA, weight = 1.3f),
         fn("ABC", FunctionKey.MODE_ALPHABET, weight = 1.3f),
-        fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME),
+        if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
         fn("space", FunctionKey.SPACE, weight = 2.4f),
         fn("←", FunctionKey.LEFT, repeatable = true),
         fn("→", FunctionKey.RIGHT, repeatable = true),
         fn(LABEL_ENTER, FunctionKey.ENTER, weight = 1.5f),
     )
 
-    private val symbols1 = KeyboardLayout(
+    private fun symbols1(showSwitchKey: Boolean) = KeyboardLayout(
         rowHeightDp = 48f,
         rows = listOf(
             textRow("1234567890"),
@@ -182,11 +182,11 @@ object KeyboardLayouts {
             listOf(fn("2/2", FunctionKey.SYMBOL_PAGE, weight = 1.5f)) +
                 textRow(".,?!'、。") +
                 fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, weight = 1.5f, repeatable = true),
-            symbolBottomRow(),
+            symbolBottomRow(showSwitchKey),
         ),
     )
 
-    private val symbols2 = KeyboardLayout(
+    private fun symbols2(showSwitchKey: Boolean) = KeyboardLayout(
         rowHeightDp = 48f,
         rows = listOf(
             textRow("[]{}#%^*+="),
@@ -194,7 +194,7 @@ object KeyboardLayouts {
             listOf(fn("1/2", FunctionKey.SYMBOL_PAGE, weight = 1.5f)) +
                 textRow("「」ー〜…＠※") +
                 fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, weight = 1.5f, repeatable = true),
-            symbolBottomRow(),
+            symbolBottomRow(showSwitchKey),
         ),
     )
 }
