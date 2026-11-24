@@ -71,13 +71,13 @@ object KeyboardLayouts {
      * down) and [labels] the matching characters, exactly as defined by
      * src/data/preedit/flick-hiragana.tsv. A space in [labels] means "no flick".
      */
-    private fun flick(labels: String, codes: String): Key {
+    private fun flick(labels: String, codes: String, weight: Float = 1f): Key {
         require(labels.length == 5 && codes.length == 5)
         val flicks = (1..4).map { i ->
             if (labels[i] == ' ') null
             else Flick(labels[i].toString(), KeyAction.MozcChar(codes[i].code))
         }
-        return Key(labels[0].toString(), KeyAction.MozcChar(codes[0].code), flicks)
+        return Key(labels[0].toString(), KeyAction.MozcChar(codes[0].code), flicks, weight = weight)
     }
 
     const val LABEL_BACKSPACE = "⌫"
@@ -90,12 +90,14 @@ object KeyboardLayouts {
     private fun kanaFlick(showSwitchKey: Boolean) = KeyboardLayout(
         rowHeightDp = 54f,
         rows = listOf(
+            // Rows are centered by the view, so without the switch key the four
+            // remaining keys widen to keep the row spanning the full width.
             listOfNotNull(
                 if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
-                flick("あいうえお", "1_;:@"),
-                flick("かきくけこ", "2abc|"),
-                flick("さしすせそ", "3def~"),
-                fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, repeatable = true),
+                flick("あいうえお", "1_;:@", if (showSwitchKey) 1f else 1.25f),
+                flick("かきくけこ", "2abc|", if (showSwitchKey) 1f else 1.25f),
+                flick("さしすせそ", "3def~", if (showSwitchKey) 1f else 1.25f),
+                fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, weight = if (showSwitchKey) 1f else 1.25f, repeatable = true),
             ),
             listOf(
                 fn("←", FunctionKey.LEFT, repeatable = true),
@@ -134,7 +136,7 @@ object KeyboardLayouts {
                 fn("記号", FunctionKey.MODE_SYMBOL, weight = 1.3f),
                 if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
                 mozc("、", ','),
-                fn(LABEL_SPACE, FunctionKey.SPACE, weight = 2.7f),
+                fn(LABEL_SPACE, FunctionKey.SPACE, weight = if (showSwitchKey) 2.7f else 3.7f),
                 mozc("。", '.'),
                 fn("←", FunctionKey.LEFT, repeatable = true),
                 fn("→", FunctionKey.RIGHT, repeatable = true),
@@ -168,7 +170,7 @@ object KeyboardLayouts {
         fn("あ", FunctionKey.MODE_KANA, weight = 1.3f),
         fn("ABC", FunctionKey.MODE_ALPHABET, weight = 1.3f),
         if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
-        fn("space", FunctionKey.SPACE, weight = 2.4f),
+        fn("space", FunctionKey.SPACE, weight = if (showSwitchKey) 2.4f else 3.4f),
         fn("←", FunctionKey.LEFT, repeatable = true),
         fn("→", FunctionKey.RIGHT, repeatable = true),
         fn(LABEL_ENTER, FunctionKey.ENTER, weight = 1.5f),
