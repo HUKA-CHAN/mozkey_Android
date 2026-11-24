@@ -4,7 +4,7 @@ package org.mozkey.inputmethod.keyboard
 enum class FunctionKey {
     BACKSPACE, ENTER, SPACE, LEFT, RIGHT,
     MODE_KANA, MODE_ALPHABET, MODE_SYMBOL,
-    SHIFT, SYMBOL_PAGE, SWITCH_IME,
+    SHIFT, SYMBOL_PAGE, SWITCH_IME, NONE,
 }
 
 sealed class KeyAction {
@@ -58,6 +58,12 @@ object KeyboardLayouts {
     private fun fn(label: String, key: FunctionKey, weight: Float = 1f, repeatable: Boolean = false) =
         Key(label, KeyAction.Function(key), weight = weight, functional = true, repeatable = repeatable)
 
+    /** The IME-switch slot: the real key, or an inert blank key that keeps the
+     *  layout's geometry unchanged when the switch key is hidden. */
+    private fun switchKeySlot(showSwitchKey: Boolean): Key =
+        if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME)
+        else Key("", KeyAction.Function(FunctionKey.NONE), functional = true)
+
     private fun text(label: String, weight: Float = 1f) = Key(label, KeyAction.Text(label), weight = weight)
 
     private fun textRow(characters: String): List<Key> =
@@ -71,13 +77,13 @@ object KeyboardLayouts {
      * down) and [labels] the matching characters, exactly as defined by
      * src/data/preedit/flick-hiragana.tsv. A space in [labels] means "no flick".
      */
-    private fun flick(labels: String, codes: String, weight: Float = 1f): Key {
+    private fun flick(labels: String, codes: String): Key {
         require(labels.length == 5 && codes.length == 5)
         val flicks = (1..4).map { i ->
             if (labels[i] == ' ') null
             else Flick(labels[i].toString(), KeyAction.MozcChar(codes[i].code))
         }
-        return Key(labels[0].toString(), KeyAction.MozcChar(codes[0].code), flicks, weight = weight)
+        return Key(labels[0].toString(), KeyAction.MozcChar(codes[0].code), flicks)
     }
 
     const val LABEL_BACKSPACE = "⌫"
@@ -90,14 +96,12 @@ object KeyboardLayouts {
     private fun kanaFlick(showSwitchKey: Boolean) = KeyboardLayout(
         rowHeightDp = 54f,
         rows = listOf(
-            // Rows are centered by the view, so without the switch key the four
-            // remaining keys widen to keep the row spanning the full width.
-            listOfNotNull(
-                if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
-                flick("あいうえお", "1_;:@", if (showSwitchKey) 1f else 1.25f),
-                flick("かきくけこ", "2abc|", if (showSwitchKey) 1f else 1.25f),
-                flick("さしすせそ", "3def~", if (showSwitchKey) 1f else 1.25f),
-                fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, weight = if (showSwitchKey) 1f else 1.25f, repeatable = true),
+            listOf(
+                switchKeySlot(showSwitchKey),
+                flick("あいうえお", "1_;:@"),
+                flick("かきくけこ", "2abc|"),
+                flick("さしすせそ", "3def~"),
+                fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, repeatable = true),
             ),
             listOf(
                 fn("←", FunctionKey.LEFT, repeatable = true),
@@ -132,11 +136,11 @@ object KeyboardLayouts {
             listOf(fn("ABC", FunctionKey.MODE_ALPHABET, weight = 1.5f)) +
                 "zxcvbnm".map { mozc(it.toString(), it) } +
                 fn(LABEL_BACKSPACE, FunctionKey.BACKSPACE, weight = 1.5f, repeatable = true),
-            listOfNotNull(
+            listOf(
                 fn("記号", FunctionKey.MODE_SYMBOL, weight = 1.3f),
-                if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
+                switchKeySlot(showSwitchKey),
                 mozc("、", ','),
-                fn(LABEL_SPACE, FunctionKey.SPACE, weight = if (showSwitchKey) 2.7f else 3.7f),
+                fn(LABEL_SPACE, FunctionKey.SPACE, weight = 2.7f),
                 mozc("。", '.'),
                 fn("←", FunctionKey.LEFT, repeatable = true),
                 fn("→", FunctionKey.RIGHT, repeatable = true),
@@ -166,11 +170,11 @@ object KeyboardLayouts {
     )
 
     // ---- 数字・記号 (直接入力) --------------------------------------------------
-    private fun symbolBottomRow(showSwitchKey: Boolean) = listOfNotNull(
+    private fun symbolBottomRow(showSwitchKey: Boolean) = listOf(
         fn("あ", FunctionKey.MODE_KANA, weight = 1.3f),
         fn("ABC", FunctionKey.MODE_ALPHABET, weight = 1.3f),
-        if (showSwitchKey) fn(LABEL_SWITCH_IME, FunctionKey.SWITCH_IME) else null,
-        fn("space", FunctionKey.SPACE, weight = if (showSwitchKey) 2.4f else 3.4f),
+        switchKeySlot(showSwitchKey),
+        fn("space", FunctionKey.SPACE, weight = 2.4f),
         fn("←", FunctionKey.LEFT, repeatable = true),
         fn("→", FunctionKey.RIGHT, repeatable = true),
         fn(LABEL_ENTER, FunctionKey.ENTER, weight = 1.5f),
