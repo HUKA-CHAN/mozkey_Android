@@ -400,6 +400,7 @@ class MozkeyInputMethodService :
                 if (!switchToNextInputMethod(false)) {
                     getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
                 }
+            FunctionKey.NONE -> Unit
         }
     }
 
