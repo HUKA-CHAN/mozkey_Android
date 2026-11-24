@@ -169,7 +169,7 @@ class MozkeyInputMethodService :
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT),
         )
 
-                // Since Android 15 an IME that targets API 35+ draws edge to edge, so the
+        // Since Android 15 an IME that targets API 35+ draws edge to edge, so the
         // keyboard has to keep its keys clear of the navigation bar and cutouts.
         // Some apps hide the navigation bar, which drops the visible bottom inset
         // to zero and leaves the bottom key row inside the system's gesture area,
@@ -331,6 +331,7 @@ class MozkeyInputMethodService :
             // Colors are read when the views are created, so build them again.
             Prefs.KEY_KEYBOARD_THEME, Prefs.KEY_KEY_BORDERS -> setInputView(onCreateInputView())
             Prefs.KEY_FLICK_PREVIEW -> keyboardView?.flickPreviewEnabled = prefs.flickPreview
+            Prefs.KEY_SHOW_IME_SWITCH_KEY -> updateKeyboard()
             Prefs.KEY_KEYBOARD_HEIGHT -> keyboardView?.heightScale = prefs.keyboardHeightPercent / 100f
             Prefs.KEY_ZENZ, Prefs.KEY_LIVE_CONVERSION -> {
                 if (prefs.zenz && prefs.liveConversion) maybeLoadZenz() else releaseZenz()
@@ -737,7 +738,7 @@ class MozkeyInputMethodService :
 
     private fun updateKeyboard() {
         val keyboard = keyboardView ?: return
-        keyboard.setLayout(KeyboardLayouts.forMode(mode))
+        keyboard.setLayout(KeyboardLayouts.forMode(mode, prefs.showImeSwitchKey))
         keyboard.setShifted(shift != ShiftState.OFF)
         updateDynamicLabels()
     }
