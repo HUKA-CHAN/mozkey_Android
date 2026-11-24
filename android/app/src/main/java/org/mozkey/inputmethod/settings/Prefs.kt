@@ -65,6 +65,11 @@ class Prefs(context: Context) {
         get() = raw.getBoolean(KEY_PHRASE_HISTORY, true)
         set(value) = raw.edit().putBoolean(KEY_PHRASE_HISTORY, value).apply()
 
+    /** Shows the key that switches to another input method (the globe key). */
+    var showImeSwitchKey: Boolean
+        get() = raw.getBoolean(KEY_SHOW_IME_SWITCH_KEY, true)
+        set(value) = raw.edit().putBoolean(KEY_SHOW_IME_SWITCH_KEY, value).apply()
+
     companion object {
         private const val FILE = "mozkey"
         const val KEY_KANA_LAYOUT = "kana_layout"
@@ -74,6 +79,7 @@ class Prefs(context: Context) {
         const val KEY_HAPTIC = "haptic"
         const val KEY_INCOGNITO = "incognito"
         const val KEY_PHRASE_HISTORY = "phrase_history"
+        const val KEY_SHOW_IME_SWITCH_KEY = "show_ime_switch_key"
         const val KEY_KEYBOARD_HEIGHT = "keyboard_height_percent"
         const val KEY_FLICK_PREVIEW = "flick_preview"
         const val KEY_KEYBOARD_THEME = "keyboard_theme"
