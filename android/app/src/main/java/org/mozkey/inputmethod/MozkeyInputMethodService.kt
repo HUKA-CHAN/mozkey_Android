@@ -30,6 +30,7 @@ import org.mozc.android.inputmethod.japanese.protobuf.ProtoConfig.Config
 import org.mozkey.inputmethod.engine.Diagnostics
 import org.mozkey.inputmethod.engine.MozcEngine
 import org.mozkey.inputmethod.engine.MozcMessages
+import org.mozkey.inputmethod.engine.PhraseHistory
 import org.mozkey.inputmethod.keyboard.CandidateBarView
 import org.mozkey.inputmethod.keyboard.FunctionKey
 import org.mozkey.inputmethod.keyboard.KeyAction
@@ -39,6 +40,7 @@ import org.mozkey.inputmethod.keyboard.KeyboardView
 import org.mozkey.inputmethod.keyboard.Theme
 import org.mozkey.inputmethod.settings.Prefs
 import org.mozkey.inputmethod.zenz.ZenzManager
+import java.io.File
 
 /**
  * Mozkey for Android: an InputMethodService on top of libmozc.so.
@@ -86,6 +88,15 @@ class MozkeyInputMethodService :
     /** Surrounding text captured when the current composition started. */
     private var compositionContext: MozcContext? = null
 
+    /** App-layer phrase history: phrases committed before, offered again by reading prefix. */
+    private lateinit var phraseHistory: PhraseHistory
+
+    /** Reading (concatenated preedit keys) of the composition in the last rendered output. */
+    private var lastReading = ""
+
+    /** History phrases currently shown in the candidate bar, by their reserved negative id. */
+    private var historyById: Map<Int, PhraseHistory.Entry> = emptyMap()
+
     private var pendingCallback: Runnable? = null
     private var fieldIncognito = false
     private var fieldIsPassword = false
@@ -103,6 +114,7 @@ class MozkeyInputMethodService :
         ZenzManager.current = zenz
         engine = MozcEngine(this)
         MozcEngine.current = engine
+        phraseHistory = PhraseHistory(File(filesDir, PHRASE_HISTORY_FILE))
         engine.initialize { ok ->
             Diagnostics.engineReady = ok
             if (ok) {
@@ -117,6 +129,7 @@ class MozkeyInputMethodService :
         prefs.raw.unregisterOnSharedPreferenceChangeListener(this)
         cancelPendingCallback()
         engine.syncData()
+        phraseHistory.flush()
         if (MozcEngine.current === engine) MozcEngine.current = null
         if (ZenzManager.current === zenz) ZenzManager.current = null
         super.onDestroy()
@@ -135,7 +148,11 @@ class MozkeyInputMethodService :
         }
 
         val bar = CandidateBarView(this)
-        bar.onCandidateSelected = { candidate -> sendSessionCommand(MozcMessages.submitCandidate(candidate.id)) }
+        bar.onCandidateSelected = { candidate ->
+            val entry = historyById[candidate.id]
+            if (entry != null) commitHistoryPhrase(entry)
+            else sendSessionCommand(MozcMessages.submitCandidate(candidate.id))
+        }
         val barHeight = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, 44f, resources.displayMetrics
         ).toInt()
@@ -154,13 +171,21 @@ class MozkeyInputMethodService :
 
         // Since Android 15 an IME that targets API 35+ draws edge to edge, so the
         // keyboard has to keep its keys clear of the navigation bar and cutouts.
+        // Some apps hide the navigation bar, which drops the visible bottom inset
+        // to zero and leaves the bottom key row inside the system's gesture area,
+        // where its touches are swallowed. Keep the clearance the bar would take
+        // if it were shown, so the bottom row always stays clear of that area.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
             root.setOnApplyWindowInsetsListener { view, insets ->
                 val bars = insets.getInsets(
                     WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
                 )
-                view.setPadding(bars.left, 0, bars.right, bars.bottom)
-                keyboard.overflowBottom = bars.bottom.toFloat()
+                val navBottom = insets.getInsetsIgnoringVisibility(
+                    WindowInsets.Type.navigationBars()
+                ).bottom
+                val bottom = maxOf(bars.bottom, navBottom)
+                view.setPadding(bars.left, 0, bars.right, bottom)
+                keyboard.overflowBottom = bottom.toFloat()
                 insets
             }
         }
@@ -216,6 +241,7 @@ class MozkeyInputMethodService :
     override fun onFinishInputView(finishingInput: Boolean) {
         abandonComposition(finishInEditor = true)
         engine.syncData()
+        phraseHistory.flush()
         super.onFinishInputView(finishingInput)
     }
 
@@ -305,6 +331,7 @@ class MozkeyInputMethodService :
             // Colors are read when the views are created, so build them again.
             Prefs.KEY_KEYBOARD_THEME, Prefs.KEY_KEY_BORDERS -> setInputView(onCreateInputView())
             Prefs.KEY_FLICK_PREVIEW -> keyboardView?.flickPreviewEnabled = prefs.flickPreview
+            Prefs.KEY_SHOW_IME_SWITCH_KEY -> updateKeyboard()
             Prefs.KEY_KEYBOARD_HEIGHT -> keyboardView?.heightScale = prefs.keyboardHeightPercent / 100f
             Prefs.KEY_ZENZ, Prefs.KEY_LIVE_CONVERSION -> {
                 if (prefs.zenz && prefs.liveConversion) maybeLoadZenz() else releaseZenz()
@@ -373,6 +400,7 @@ class MozkeyInputMethodService :
                 if (!switchToNextInputMethod(false)) {
                     getSystemService(InputMethodManager::class.java)?.showInputMethodPicker()
                 }
+            FunctionKey.NONE -> Unit
         }
     }
 
@@ -464,6 +492,13 @@ class MozkeyInputMethodService :
         val connection = currentInputConnection
         val hasPreedit = output.hasPreedit() && output.preedit.segmentCount > 0
         val committed = output.hasResult() && output.result.type == Result.ResultType.STRING
+
+        // Phrase history learns from commits. The reading of the part that was
+        // just committed precedes the reading of what is still being composed.
+        val remainingReading =
+            if (hasPreedit) output.preedit.segmentList.joinToString("") { it.key } else ""
+        if (committed) recordPhrase(output.result.value, remainingReading)
+        lastReading = remainingReading
 
         if (connection != null) {
             connection.beginBatchEdit()
@@ -574,7 +609,72 @@ class MozkeyInputMethodService :
             }
             if (window.hasFocusedIndex()) focused = window.focusedIndex
         }
+        // History phrases go first: they are what the user most likely wants
+        // to type again, and they never carry the conversion focus.
+        val history = historySuggestions(output)
+        historyById = if (history.isEmpty()) {
+            emptyMap()
+        } else {
+            history.mapIndexed { index, entry -> historyId(index) to entry }.toMap()
+        }
+        if (history.isNotEmpty()) {
+            val chips = history.mapIndexed { index, entry ->
+                CandidateBarView.Candidate(historyId(index), entry.value, HISTORY_DESCRIPTION)
+            }
+            list.addAll(0, chips)
+            if (focused >= 0) focused += chips.size
+        }
         bar.setCandidates(list, focused)
+    }
+
+    // --------------------------------------------------------- phrase history
+
+    /** Phrase history is learned and offered only where Mozc itself would learn. */
+    private fun phraseLearningAllowed(): Boolean =
+        prefs.phraseHistory && !prefs.incognito && !fieldIncognito && !fieldIsPassword
+
+    /**
+     * Records one committed conversion in the phrase history. [remainingReading]
+     * is the reading of the part still being composed after the commit (empty
+     * when the commit finished the composition); the committed part's reading
+     * is what precedes it in [lastReading].
+     */
+    private fun recordPhrase(value: String, remainingReading: String) {
+        if (!phraseLearningAllowed()) return
+        val committedReading = when {
+            remainingReading.isEmpty() -> lastReading
+            lastReading.endsWith(remainingReading) ->
+                lastReading.dropLast(remainingReading.length)
+            else -> return
+        }
+        if (committedReading.isEmpty()) return
+        phraseHistory.record(committedReading, value)
+    }
+
+    /**
+     * Previously committed phrases whose reading starts with the current one.
+     * Only in the plain suggestion state: once a segment is highlighted, the
+     * bar belongs to the conversion candidates.
+     */
+    private fun historySuggestions(output: Output): List<PhraseHistory.Entry> {
+        if (!phraseLearningAllowed()) return emptyList()
+        if (!output.hasPreedit() || output.preedit.segmentCount == 0) return emptyList()
+        if (output.preedit.segmentList.any {
+                it.annotation == Preedit.Segment.Annotation.HIGHLIGHT
+            }
+        ) return emptyList()
+        val reading = output.preedit.segmentList.joinToString("") { it.key }
+        if (reading.isEmpty()) return emptyList()
+        return phraseHistory.suggest(reading)
+    }
+
+    /** Commits a history phrase directly, replacing the current composition. */
+    private fun commitHistoryPhrase(entry: PhraseHistory.Entry) {
+        // Count the reuse under the phrase's own reading, not the typed prefix.
+        phraseHistory.record(entry.reading, entry.value)
+        val connection = currentInputConnection
+        abandonComposition(finishInEditor = false)
+        connection?.commitText(entry.value, 1)
     }
 
     /**
@@ -622,6 +722,8 @@ class MozkeyInputMethodService :
         hasComposition = false
         compositionContext = null
         composingStart = -1
+        lastReading = ""
+        historyById = emptyMap()
         if (engine.isReady) {
             // RESET_CONTEXT cancels any composition and confirms pending learning.
             // REVERT must not be used here: with no composition it undoes the
@@ -637,7 +739,7 @@ class MozkeyInputMethodService :
 
     private fun updateKeyboard() {
         val keyboard = keyboardView ?: return
-        keyboard.setLayout(KeyboardLayouts.forMode(mode))
+        keyboard.setLayout(KeyboardLayouts.forMode(mode, prefs.showImeSwitchKey))
         keyboard.setShifted(shift != ShiftState.OFF)
         updateDynamicLabels()
     }
@@ -651,6 +753,17 @@ class MozkeyInputMethodService :
     companion object {
         /** Characters of surrounding text handed to the engine on each side. */
         private const val CONTEXT_CHARS = 64
+
+        /** File in the app's private storage holding the phrase history. */
+        private const val PHRASE_HISTORY_FILE = "phrase_history.tsv"
+
+        /** Candidate-bar description shown on history phrases. */
+        private const val HISTORY_DESCRIPTION = "履歴"
+
+        /** History candidates use reserved negative ids; Mozc's own ids are never negative. */
+        private const val HISTORY_ID_BASE = -1_000_000
+
+        private fun historyId(index: Int): Int = HISTORY_ID_BASE - index
 
         /** Build.VERSION_CODES for Android 17. */
         private const val API_ANDROID_17 = 37
