@@ -80,6 +80,14 @@ class SettingsActivity : Activity() {
                     getString(R.string.settings_incognito), getString(R.string.settings_incognito_note),
                     prefs.incognito,
                 ) { prefs.incognito = it },
+                ui.toggleRow(
+                    getString(R.string.settings_phrase_history), getString(R.string.settings_phrase_history_note),
+                    prefs.phraseHistory,
+                ) { prefs.phraseHistory = it },
+                ui.toggleRow(
+                    getString(R.string.settings_show_ime_switch_key), getString(R.string.settings_show_ime_switch_key_note),
+                    prefs.showImeSwitchKey,
+                ) { prefs.showImeSwitchKey = it },
                 ui.toggleRow(getString(R.string.settings_haptic), null, prefs.haptic) { prefs.haptic = it },
             )
         )
