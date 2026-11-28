@@ -22,6 +22,9 @@
 #endif  // TARGET_OS_OSX
 #endif  // __APPLE__
 
+#if defined(__ANDROID__)
+#include "session/zenz_inprocess_client.h"
+#endif  // __ANDROID__
 #include "session/zenz_live_corrector.h"
 #include "session/zenz_named_pipe_client.h"
 #include "session/zenz_unix_socket_client.h"
@@ -103,6 +106,11 @@ std::unique_ptr<ZenzClient> CreateZenzClient() {
 #if defined(__APPLE__) && TARGET_OS_OSX
   return std::make_unique<ZenzUnixSocketClient>(
       ::mozc::zenz::GetZenzUnixSocketPath(), &LaunchMacZenzScorer);
+#elif defined(__ANDROID__)
+  // Android cannot launch the scorer helper process.  The inference runtime
+  // is loaded into this process and registered through
+  // mozkey_zenz_register_backend().
+  return std::make_unique<ZenzInProcessClient>();
 #else
   return std::make_unique<ZenzNamedPipeClient>();
 #endif  // __APPLE__ && TARGET_OS_OSX
