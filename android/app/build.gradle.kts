@@ -36,12 +36,23 @@ android {
         }
     }
 
+    signingConfigs {
+        create("fixedDebug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Signed with the debug key so that the CI artifact can be installed
-            // directly. Replace with your own signing config before distributing.
-            signingConfig = signingConfigs.getByName("debug")
+            // Signed with a fixed debug key checked into the repo so that CI
+            // artifacts can be installed over previous builds without
+            // uninstalling. Replace with your own signing config before
+            // distributing.
+            signingConfig = signingConfigs.getByName("fixedDebug")
         }
     }
 
